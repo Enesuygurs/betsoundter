@@ -1,9 +1,24 @@
 // popup.js - UI logic to control equalizer
 (function(){
-  // 31-band frequencies (Hz) - match content_script
-  const bands = [
-    20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000
-  ];
+  // Use the 10-band set requested: 32,64,125,250,500,1k,2k,4k,8k,16k
+  const bands = [32,64,125,250,500,1000,2000,4000,8000,16000];
+
+  // helper to send messages safely to the active tab and handle cases with no receiver
+  function sendToActiveTab(msg, cb){
+    chrome.tabs.query({active:true,currentWindow:true}, tabs => {
+      const tab = tabs && tabs[0];
+      if(!tab){ if(cb) cb(null); return; }
+      chrome.tabs.sendMessage(tab.id, msg, resp => {
+        if(chrome.runtime.lastError){
+          // no content script in tab or other error; don't throw in popup
+          console.warn('sendMessage ->', chrome.runtime.lastError.message);
+          if(cb) cb(null);
+        }else{
+          if(cb) cb(resp);
+        }
+      });
+    });
+  }
 
   const mediaSelect = document.getElementById('mediaSelect');
   const bandsWrap = document.getElementById('bands');
@@ -44,15 +59,9 @@
     // apply to either selected element or all
     if(selected === 'all'){
       // send message to active tab to update all elements
-      chrome.tabs.query({active:true,currentWindow:true}, tabs => {
-        if(!tabs[0]) return;
-        chrome.tabs.sendMessage(tabs[0].id, {type:'setAllBands', bandIndex, gain});
-      });
+      sendToActiveTab({type:'setAllBands', bandIndex, gain});
     }else{
-      chrome.tabs.query({active:true,currentWindow:true}, tabs => {
-        if(!tabs[0]) return;
-        chrome.tabs.sendMessage(tabs[0].id, {type:'setBand', id:selected, bandIndex, gain});
-      });
+      sendToActiveTab({type:'setBand', id:selected, bandIndex, gain});
     }
   }
 
@@ -60,10 +69,7 @@
   function onMasterGainChange(v){
     masterVal.textContent = Number(v).toFixed(2);
     chrome.storage.sync.set({globalMasterGain: Number(v)});
-    chrome.tabs.query({active:true,currentWindow:true}, tabs => {
-      if(!tabs[0]) return;
-      chrome.tabs.sendMessage(tabs[0].id, {type:'setMasterGain', gain: Number(v)});
-    });
+    sendToActiveTab({type:'setMasterGain', gain: Number(v)});
   }
 
   function populateBands(saved){
@@ -78,16 +84,13 @@
     mediaSelect.innerHTML = '';
     const optAll = document.createElement('option'); optAll.value='all'; optAll.textContent='All elements';
     mediaSelect.appendChild(optAll);
-    chrome.tabs.query({active:true,currentWindow:true}, tabs => {
-      if(!tabs[0]) return;
-      chrome.tabs.sendMessage(tabs[0].id, {type:'getMedia'}, resp => {
-        if(!resp || !resp.media) return;
-        for(const m of resp.media){
-          const o = document.createElement('option');
-          o.value = m.id; o.textContent = `${m.tag} ${m.src?('- ' + (m.src.split('/').pop()||m.src)):''}`;
-          mediaSelect.appendChild(o);
-        }
-      });
+    sendToActiveTab({type:'getMedia'}, resp => {
+      if(!resp || !resp.media) return;
+      for(const m of resp.media){
+        const o = document.createElement('option');
+        o.value = m.id; o.textContent = `${m.tag} ${m.src?('- ' + (m.src.split('/').pop()||m.src)):''}`;
+        mediaSelect.appendChild(o);
+      }
     });
   }
 
@@ -99,12 +102,10 @@
     ranges.forEach(r=>{ r.value=0; const v = r.parentElement.querySelector('.val'); if(v) v.textContent=0; });
     if(masterGainInput){ masterGainInput.value = 1; masterVal.textContent = '1.00'; }
     // apply
-    chrome.tabs.query({active:true,currentWindow:true}, tabs => { if(!tabs[0]) return; chrome.tabs.sendMessage(tabs[0].id, {type:'applyAll'}); });
+    sendToActiveTab({type:'applyAll'});
   });
 
-  applyAllBtn.addEventListener('click', ()=>{
-    chrome.tabs.query({active:true,currentWindow:true}, tabs => { if(!tabs[0]) return; chrome.tabs.sendMessage(tabs[0].id, {type:'applyAll'}); });
-  });
+  applyAllBtn.addEventListener('click', ()=>{ sendToActiveTab({type:'applyAll'}); });
 
   if(masterGainInput){
     masterGainInput.addEventListener('input', ()=> onMasterGainChange(masterGainInput.value));
@@ -112,12 +113,14 @@
 
   autoFixBtn.addEventListener('click', ()=>{
     // send applyAutoFix to page which also persists conservative settings
-    chrome.tabs.query({active:true,currentWindow:true}, tabs => { if(!tabs[0]) return; chrome.tabs.sendMessage(tabs[0].id, {type:'applyAutoFix'}, resp => { if(resp && resp.ok) {
+    sendToActiveTab({type:'applyAutoFix'}, resp => {
+      if(resp && resp.ok){
         // update UI to reflect applied persistent values
         chrome.storage.sync.get(['globalMasterGain','globalCompressor'], data => {
           if(data.globalMasterGain && masterGainInput){ masterGainInput.value = data.globalMasterGain; masterVal.textContent = Number(data.globalMasterGain).toFixed(2); }
         });
-      }}); });
+      }
+    });
   });
 
   // init: load stored bands & refresh media
