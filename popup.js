@@ -77,7 +77,7 @@
     
     // Snap-to-grid: defined threshold values
     const snapThresholds = [-12, -6, 0, 6, 12];
-    const snapDistance = 0.5; // within 0.5 units, snap to threshold
+    const snapDistance = 0.75; // within 0.75 units, snap to threshold
     
     function handleRangeChange(){
       let finalValue = Number(range.value);
@@ -90,13 +90,17 @@
         }
       }
       
-      range.value = finalValue;
+      if(finalValue !== Number(range.value)){
+        range.value = finalValue;
+      }
       val.textContent = finalValue; 
       onBandChange(idx, finalValue); 
     }
     
     range.addEventListener('input', handleRangeChange);
     range.addEventListener('change', handleRangeChange);
+    range.addEventListener('mouseup', handleRangeChange);
+    range.addEventListener('touchend', handleRangeChange);
     
     div.appendChild(label);
     div.appendChild(range);
