@@ -68,13 +68,33 @@
     // Format frequency: 1000+ Hz as K (e.g., 1000 Hz = 1K, 16000 Hz = 16K)
     const freqLabel = freq >= 1000 ? (freq / 1000) + 'K' : freq + ' Hz';
     label.textContent = freqLabel;
-  const range = document.createElement('input');
-  range.type = 'range';
-  range.min = -12; range.max = 12; range.step = 0.5;
+    const range = document.createElement('input');
+    range.type = 'range';
+    range.min = -12; range.max = 12; range.step = 0.5;
     range.value = value || 0;
     range.dataset.band = idx;
     const val = document.createElement('div'); val.className='val'; val.textContent = range.value;
-    range.addEventListener('input', ()=>{ val.textContent = range.value; onBandChange(idx, range.value); });
+    
+    // Snap-to-grid: defined threshold values
+    const snapThresholds = [-12, -6, 0, 6, 12];
+    const snapDistance = 0.3; // within 0.3 units, snap to threshold
+    
+    range.addEventListener('input', ()=>{ 
+      let finalValue = Number(range.value);
+      
+      // Check if value is close to any threshold
+      for(const threshold of snapThresholds){
+        if(Math.abs(finalValue - threshold) < snapDistance){
+          finalValue = threshold;
+          break;
+        }
+      }
+      
+      range.value = finalValue;
+      val.textContent = finalValue; 
+      onBandChange(idx, finalValue); 
+    });
+    
     div.appendChild(label);
     div.appendChild(range);
     div.appendChild(val);
