@@ -24,6 +24,7 @@
   const masterGainInput = document.getElementById('masterGain');
   const masterVal = document.getElementById('masterVal');
   const autoFixBtn = document.getElementById('autoFixBtn');
+  const autoEQBtn = document.getElementById('autoEQBtn');
   const refreshBtn = document.getElementById('refreshBtn');
   const resetBtn = document.getElementById('resetBtn');
   const applyAllBtn = document.getElementById('applyAllBtn');
@@ -147,6 +148,18 @@
       }
     });
   });
+
+  if(autoEQBtn){
+    autoEQBtn.addEventListener('click', ()=>{
+      // request content script to analyze and attenuate harsh bands
+      sendToActiveTab({type:'applyAutoEQ'}, resp => {
+        // resp may be null if no content script; otherwise we can inform the user
+        if(!resp) return;
+        // optional: show number of adjusted bands in UI (not implemented visually)
+        console.log('Auto-EQ result', resp);
+      });
+    });
+  }
 
   // init: load stored bands & refresh media
   chrome.storage.sync.get(['globalBands'], data => {

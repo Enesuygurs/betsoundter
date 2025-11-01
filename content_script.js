@@ -28,16 +28,38 @@
     master.gain = ctx.createGain();
     master.gain.gain.value = 1.0; // default unity
     master.compressor = ctx.createDynamicsCompressor();
+    // analyser for auto-EQ
+    master.analyser = ctx.createAnalyser();
+    master.analyser.fftSize = 2048;
+    master.analyser.smoothingTimeConstant = 0.3;
+    // waveshaper limiter (soft clip)
+    master.waveshaper = ctx.createWaveShaper();
+    master.waveshaper.curve = makeSoftClipperCurve(4096, 0.5);
+    master.waveshaper.oversample = '4x';
     // default gentle compressor settings; can be tuned via messages
     master.compressor.threshold.value = -12;
     master.compressor.knee.value = 30;
     master.compressor.ratio.value = 6;
     master.compressor.attack.value = 0.003;
     master.compressor.release.value = 0.25;
-    // connect chain: filters -> master.gain -> compressor -> destination
+    // connect chain: filters -> master.gain -> compressor -> waveshaper -> destination
+    // also tap analyser from master.gain so it sees post-filter summed signal
+    master.gain.connect(master.analyser);
     master.gain.connect(master.compressor);
-    master.compressor.connect(ctx.destination);
+    master.compressor.connect(master.waveshaper);
+    master.waveshaper.connect(ctx.destination);
     return master;
+  }
+
+  function makeSoftClipperCurve(samples, amount){
+    const curve = new Float32Array(samples);
+    const k = typeof amount === 'number' ? amount : 0.5;
+    for(let i=0;i<samples;i++){
+      const x = (i * 2 / samples) - 1;
+      // soft clipping formula
+      curve[i] = (Math.sign(x) * (1 - Math.exp(-Math.abs(x) * k)));
+    }
+    return curve;
   }
 
   // ensure AudioContext is running (some browsers start it suspended)
@@ -135,6 +157,78 @@
         }catch(e){/* ignore */}
       }
     });
+  }
+
+  // Auto-EQ: analyze frequency content and attenuate the loudest bands among our defined centers
+  function autoEQApply(){
+    const m = ensureMasterNodes();
+    const analyser = m.analyser;
+    if(!analyser) return {ok:false, reason:'no-analyser'};
+    const fftSize = analyser.fftSize;
+    const bins = analyser.frequencyBinCount;
+    const freqPerBin = ctx.sampleRate / fftSize;
+    const data = new Float32Array(bins);
+
+    // sample a short window (average a few frames)
+    const frames = 6;
+    const accum = new Float32Array(bins);
+    for(let f=0; f<frames; f++){
+      analyser.getFloatFrequencyData(data);
+      for(let i=0;i<bins;i++) accum[i] += data[i];
+    }
+    for(let i=0;i<bins;i++) accum[i] /= frames; // average dB values
+
+    // map our band centers to average energy in +/- half-octave band
+    const bandEnergies = bands.map(b => {
+      const center = b.freq;
+      // half-octave bounds
+      const low = center / Math.sqrt(2);
+      const high = center * Math.sqrt(2);
+      const lowBin = Math.max(0, Math.floor(low / freqPerBin));
+      const highBin = Math.min(bins-1, Math.ceil(high / freqPerBin));
+      let sum = 0; let count = 0;
+      for(let i=lowBin;i<=highBin;i++){ sum += Math.pow(10, accum[i]/10); count++; }
+      const avgLinear = count? sum/count : 0;
+      const avgDb = avgLinear>0 ? 10*Math.log10(avgLinear) : -200;
+      return avgDb;
+    });
+
+    // find median and pick top bands above median+8dB
+    const sorted = bandEnergies.slice().sort((a,b)=>a-b);
+    const median = sorted[Math.floor(sorted.length/2)];
+    const threshold = median + 8; // dB above median considered harsh
+    const harshBands = [];
+    bandEnergies.forEach((val, idx) => { if(val >= threshold) harshBands.push({idx, val}); });
+
+    // if none exceed threshold, pick the top 1 band
+    if(harshBands.length === 0){
+      let maxIdx = 0; let maxVal = -Infinity;
+      bandEnergies.forEach((v,i)=>{ if(v>maxVal){ maxVal=v; maxIdx=i; }});
+      harshBands.push({idx:maxIdx, val:maxVal});
+    }
+
+    // attenuate selected bands by 6-10 dB depending on how loud they are
+    chrome.storage.sync.get(['globalBands'], data => {
+      const globalBands = data.globalBands || {};
+      for(const hb of harshBands){
+        const idx = hb.idx;
+        const over = Math.max(0, hb.val - median);
+        const reduce = Math.min(12, 6 + Math.round(over/6)*2); // 6..12dB
+        const prev = Number(globalBands[idx]) || 0;
+        const newVal = prev - reduce;
+        globalBands[idx] = newVal;
+        // apply smoothly to each element
+        for(const rec of elements.values()){
+          const f = rec.filters[idx];
+          if(f){
+            try{ f.gain.setTargetAtTime(newVal, ctx.currentTime, 0.05); }catch(e){ f.gain.value = newVal; }
+          }
+        }
+      }
+      chrome.storage.sync.set({globalBands});
+    });
+
+    return {ok:true, harshBands};
   }
 
   // Observe additions
