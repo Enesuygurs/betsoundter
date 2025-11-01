@@ -75,49 +75,10 @@
     range.dataset.band = idx;
     const val = document.createElement('div'); val.className='val'; val.textContent = range.value;
     
-    // Snap-to-grid: defined threshold values
-    const snapThresholds = [-12, -6, 0, 6, 12];
-    const snapDistance = 0.75; // within 0.75 units, snap to threshold
-    
-    function handleRangeChange(){
-      let finalValue = Number(range.value);
-      
-      // Check if value is close to any threshold
-      for(const threshold of snapThresholds){
-        if(Math.abs(finalValue - threshold) < snapDistance){
-          finalValue = threshold;
-          break;
-        }
-      }
-      
-      if(finalValue !== Number(range.value)){
-        range.value = finalValue;
-      }
-      val.textContent = finalValue; 
-      onBandChange(idx, finalValue); 
-    }
-    
-    range.addEventListener('input', handleRangeChange);
-    range.addEventListener('change', handleRangeChange);
-    range.addEventListener('mouseup', handleRangeChange);
-    range.addEventListener('touchend', handleRangeChange);
+    range.addEventListener('input', ()=>{ val.textContent = range.value; onBandChange(idx, range.value); });
     
     div.appendChild(label);
     div.appendChild(range);
-    
-    // Add grid indicator labels below slider
-    const gridLabels = document.createElement('div');
-    gridLabels.style.cssText = 'display:flex; justify-content:space-between; width:100%; font-size:9px; color:#667aa6; margin-top:4px; padding:0 2px;';
-    const gridValues = ['-12', '-6', '0', '6', '12'];
-    gridValues.forEach(gv => {
-      const gLabel = document.createElement('span');
-      gLabel.textContent = gv;
-      gLabel.style.flex = '1';
-      gLabel.style.textAlign = 'center';
-      gridLabels.appendChild(gLabel);
-    });
-    div.appendChild(gridLabels);
-    
     div.appendChild(val);
     return div;
   }
