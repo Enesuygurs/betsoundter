@@ -62,6 +62,8 @@ button.danger{ background:linear-gradient(90deg,#fb7185,#f97316); color:#071022;
 
 .small{ font-size:12px; color:var(--muted); margin-top:8px; }
 
+#settingsWrap{ padding:0 2px; }
+
 .preset-row{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
 .preset-row label{ white-space:nowrap; font-size:13px; color:var(--muted); }
 .preset-row input{ flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:var(--text); }
