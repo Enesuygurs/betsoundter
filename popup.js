@@ -1,6 +1,9 @@
 // popup.js - UI logic to control equalizer
 (function(){
-  const bands = [60,170,310,600,1000,3000,6000,12000,14000,16000];
+  // 31-band frequencies (Hz) - match content_script
+  const bands = [
+    20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000
+  ];
 
   const mediaSelect = document.getElementById('mediaSelect');
   const bandsWrap = document.getElementById('bands');
@@ -13,9 +16,9 @@
     div.className = 'band';
     const label = document.createElement('label');
     label.textContent = freq + ' Hz';
-    const range = document.createElement('input');
-    range.type = 'range';
-    range.min = -12; range.max = 12; range.step = 0.5;
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.min = -12; range.max = 12; range.step = 0.5;
     range.value = value || 0;
     range.dataset.band = idx;
     const val = document.createElement('div'); val.className='val'; val.textContent = range.value;

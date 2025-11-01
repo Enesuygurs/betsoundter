@@ -2,17 +2,39 @@
 // Attaches a WebAudio graph to media elements and exposes simple RPC via chrome.runtime messages
 
 (function(){
+  // 31-band equalizer frequencies (Hz). First is lowshelf, last is highshelf, others are peaking.
   const bands = [
-    {freq: 60, type: 'lowshelf'},
-    {freq: 170, type: 'peaking'},
-    {freq: 310, type: 'peaking'},
-    {freq: 600, type: 'peaking'},
+    {freq: 20, type: 'lowshelf'},
+    {freq: 25, type: 'peaking'},
+    {freq: 31.5, type: 'peaking'},
+    {freq: 40, type: 'peaking'},
+    {freq: 50, type: 'peaking'},
+    {freq: 63, type: 'peaking'},
+    {freq: 80, type: 'peaking'},
+    {freq: 100, type: 'peaking'},
+    {freq: 125, type: 'peaking'},
+    {freq: 160, type: 'peaking'},
+    {freq: 200, type: 'peaking'},
+    {freq: 250, type: 'peaking'},
+    {freq: 315, type: 'peaking'},
+    {freq: 400, type: 'peaking'},
+    {freq: 500, type: 'peaking'},
+    {freq: 630, type: 'peaking'},
+    {freq: 800, type: 'peaking'},
     {freq: 1000, type: 'peaking'},
-    {freq: 3000, type: 'peaking'},
-    {freq: 6000, type: 'peaking'},
-    {freq: 12000, type: 'peaking'},
-    {freq: 14000, type: 'peaking'},
-    {freq: 16000, type: 'highshelf'}
+    {freq: 1250, type: 'peaking'},
+    {freq: 1600, type: 'peaking'},
+    {freq: 2000, type: 'peaking'},
+    {freq: 2500, type: 'peaking'},
+    {freq: 3150, type: 'peaking'},
+    {freq: 4000, type: 'peaking'},
+    {freq: 5000, type: 'peaking'},
+    {freq: 6300, type: 'peaking'},
+    {freq: 8000, type: 'peaking'},
+    {freq: 10000, type: 'peaking'},
+    {freq: 12500, type: 'peaking'},
+    {freq: 16000, type: 'peaking'},
+    {freq: 20000, type: 'highshelf'}
   ];
 
   const ctx = (window._eqAudioContext = window._eqAudioContext || new (window.AudioContext || window.webkitAudioContext)());
@@ -24,8 +46,8 @@
       const f = ctx.createBiquadFilter();
       f.type = b.type;
       f.frequency.value = b.freq;
-      // default Q and gain
-      f.Q.value = 1;
+      // default Q and gain. With many bands, a moderate Q provides reasonable overlap.
+      f.Q.value = 1.0;
       f.gain.value = 0;
       return f;
     });
