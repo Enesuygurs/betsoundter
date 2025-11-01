@@ -23,7 +23,7 @@ body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', R
 select{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color:var(--text); }
 
 .tabs{ background:transparent; border-radius:8px; padding:6px; }
-.tab-headers{ display:flex; gap:8px; margin-bottom:10px; justify-content:center; }
+.tab-headers{ display:flex; gap:8px; margin:10px 14px; justify-content:center; width:calc(100% - 28px); }
 .tab-btn{ flex:0 0 auto; padding:8px 10px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--muted); cursor:pointer; font-weight:600; transition:all .18s ease; }
 .tab-btn:hover{ color:var(--text); transform:translateY(-1px); }
 .tab-btn.active{ background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#04263b; box-shadow:0 8px 20px rgba(99,102,241,0.12); border:1px solid rgba(255,255,255,0.06); }
