@@ -60,9 +60,10 @@ button.primary{ background:linear-gradient(90deg,var(--accent),var(--accent-2));
 button.ghost{ background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.03); }
 button.danger{ background:linear-gradient(90deg,#fb7185,#f97316); color:#071022; }
 
-.small{ font-size:12px; color:var(--muted); }
+.small{ font-size:12px; color:var(--muted); margin-top:8px; }
 
-.preset-row{ display:flex; gap:8px; margin-bottom:8px; }
+.preset-row{ display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+.preset-row label{ white-space:nowrap; font-size:13px; color:var(--muted); }
 .preset-row input{ flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:var(--text); }
 .preset-list{ display:flex; flex-direction:column; gap:8px; max-height:160px; overflow:auto; margin-bottom:8px; }
 .preset-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
