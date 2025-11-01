@@ -45,11 +45,15 @@ select{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,
 
 #masterControls{ display:flex; align-items:center; gap:8px; }
 #masterControls label{ width:76px; font-size:13px; color:var(--muted); }
-#masterControls input[type=range]{ flex:1; }
-#masterControls span{ min-width:40px; font-size:12px; color:var(--text); }
+#masterControls input[type=range]{ flex:1; min-width:120px; }
+#masterControls span{ width:40px; font-size:12px; color:var(--text); text-align:right; }
 
-.comp-row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
+.comp-row{ display:flex; align-items:center; gap:8px; margin:0; }
 .comp-row label{ width:76px; font-size:13px; color:var(--muted); }
+.comp-row input[type=range]{ flex:1; min-width:120px; }
+.comp-row span{ width:40px; font-size:12px; color:var(--text); text-align:right; }
+
+#tab-compress{ padding:0 2px; }
 .comp-row input[type=range]{ flex:1; }
 
 .footer{ display:none; }
