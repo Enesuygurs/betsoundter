@@ -28,6 +28,19 @@
   const resetBtn = document.getElementById('resetBtn');
   const applyAllBtn = document.getElementById('applyAllBtn');
 
+  // local cache of band gains to batch writes and avoid storage quota errors
+  const globalBandsLocal = {};
+  let bandsSaveTimer = null;
+  const BANDS_SAVE_DEBOUNCE_MS = 1000; // wait 1s after last change to write
+
+  function scheduleSaveBands(){
+    if(bandsSaveTimer) clearTimeout(bandsSaveTimer);
+    bandsSaveTimer = setTimeout(()=>{
+      chrome.storage.sync.set({globalBands: globalBandsLocal});
+      bandsSaveTimer = null;
+    }, BANDS_SAVE_DEBOUNCE_MS);
+  }
+
   function createBandRow(idx, freq, value){
     const div = document.createElement('div');
     div.className = 'band';
@@ -48,16 +61,12 @@
 
   function onBandChange(bandIndex, gain){
     const selected = mediaSelect.value;
-    // persist
-    chrome.storage.sync.get(['globalBands'], data => {
-      const globalBands = data.globalBands || {};
-      globalBands[bandIndex] = Number(gain);
-      chrome.storage.sync.set({globalBands});
-    });
+    // update local cache and schedule save (debounced) to avoid hitting storage quota
+    globalBandsLocal[bandIndex] = Number(gain);
+    scheduleSaveBands();
 
-    // apply to either selected element or all
+    // apply to either selected element or all (send immediately for responsiveness)
     if(selected === 'all'){
-      // send message to active tab to update all elements
       sendToActiveTab({type:'setAllBands', bandIndex, gain});
     }else{
       sendToActiveTab({type:'setBand', id:selected, bandIndex, gain});
@@ -67,8 +76,23 @@
   // master gain change
   function onMasterGainChange(v){
     masterVal.textContent = Number(v).toFixed(2);
-    chrome.storage.sync.set({globalMasterGain: Number(v)});
+    // debounce master gain writes
+    if(typeof v !== 'number') v = Number(v);
+    if(!isFinite(v)) return;
+    // update UI immediately, send to page
     sendToActiveTab({type:'setMasterGain', gain: Number(v)});
+    // schedule save
+    scheduleSaveMaster(Number(v));
+  }
+
+  let masterSaveTimer = null;
+  const MASTER_SAVE_DEBOUNCE_MS = 800;
+  function scheduleSaveMaster(value){
+    if(masterSaveTimer) clearTimeout(masterSaveTimer);
+    masterSaveTimer = setTimeout(()=>{
+      chrome.storage.sync.set({globalMasterGain: value});
+      masterSaveTimer = null;
+    }, MASTER_SAVE_DEBOUNCE_MS);
   }
 
   function populateBands(saved){
@@ -97,6 +121,8 @@
   resetBtn.addEventListener('click', ()=>{
     // reset storage & UI
     chrome.storage.sync.set({globalBands:{}, globalMasterGain:1, globalCompressor:{}});
+    // clear local cache
+    for(const k in globalBandsLocal) delete globalBandsLocal[k];
     const ranges = bandsWrap.querySelectorAll('input[type=range]');
     ranges.forEach(r=>{ r.value=0; const v = r.parentElement.querySelector('.val'); if(v) v.textContent=0; });
     if(masterGainInput){ masterGainInput.value = 1; masterVal.textContent = '1.00'; }
@@ -124,7 +150,10 @@
 
   // init: load stored bands & refresh media
   chrome.storage.sync.get(['globalBands'], data => {
-    populateBands(data.globalBands || {});
+    const saved = data.globalBands || {};
+    // populate local cache
+    for(const k in saved) try{ globalBandsLocal[k] = Number(saved[k]); }catch(e){}
+    populateBands(saved);
   });
   // load master gain stored value
   chrome.storage.sync.get(['globalMasterGain'], data => {
