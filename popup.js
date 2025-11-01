@@ -1,7 +1,13 @@
 // popup.js - UI logic to control equalizer
 (function(){
-  // Use the 31-band set (standard graphic equalizer)
-  const bands = [20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
+  // Define two band sets
+  const bandSets = {
+    10: [32,64,125,250,500,1000,2000,4000,8000,16000],
+    31: [20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000]
+  };
+
+  let currentBandMode = '10'; // default to 10-band
+  let bands = bandSets[10]; // Start with 10-band set
 
   // helper to send messages safely to the active tab and handle cases with no receiver
   function sendToActiveTab(msg, cb){
@@ -26,6 +32,7 @@
   const refreshBtn = document.getElementById('refreshBtn');
   const resetBtn = document.getElementById('resetBtn');
   const applyAllBtn = document.getElementById('applyAllBtn');
+  const bandModeSelect = document.getElementById('bandModeSelect');
   // tabs
   const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   const tabContents = Array.from(document.querySelectorAll('.tab-content'));
@@ -147,6 +154,28 @@
   });
 
   applyAllBtn.addEventListener('click', ()=>{ sendToActiveTab({type:'applyAll'}); });
+
+  // Band mode switcher
+  if(bandModeSelect){
+    bandModeSelect.addEventListener('change', ()=>{
+      const newMode = bandModeSelect.value;
+      if(newMode !== currentBandMode){
+        currentBandMode = newMode;
+        bands = bandSets[newMode];
+        chrome.storage.sync.set({bandMode: newMode});
+        // Reload bands UI
+        populateBands(globalBandsLocal);
+      }
+    });
+    // Load saved band mode
+    chrome.storage.sync.get(['bandMode'], data => {
+      if(data.bandMode && bandModeSelect){
+        bandModeSelect.value = data.bandMode;
+        currentBandMode = data.bandMode;
+        bands = bandSets[currentBandMode];
+      }
+    });
+  }
 
   if(masterGainInput){
     masterGainInput.addEventListener('input', ()=> onMasterGainChange(masterGainInput.value));
