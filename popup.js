@@ -1,7 +1,7 @@
 // popup.js - UI logic to control equalizer
 (function(){
-  // Use the 10-band set requested: 32,64,125,250,500,1k,2k,4k,8k,16k
-  const bands = [32,64,125,250,500,1000,2000,4000,8000,16000];
+  // Use the 31-band set (standard graphic equalizer)
+  const bands = [20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
 
   // helper to send messages safely to the active tab and handle cases with no receiver
   function sendToActiveTab(msg, cb){
