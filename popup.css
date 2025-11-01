@@ -48,10 +48,11 @@ select{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,
 #masterControls input[type=range]{ flex:1; min-width:120px; }
 #masterControls span{ width:40px; font-size:12px; color:var(--text); text-align:right; line-height:24px; }
 
+/* compressor rows: label on the left, right-aligned; value on the right, left-aligned */
 .comp-row{ display:flex; align-items:center; gap:6px; margin:0; height:24px; }
-.comp-row label{ width:auto; min-width:60px; font-size:13px; color:var(--muted); line-height:24px; }
+.comp-row label{ width:auto; min-width:60px; font-size:13px; color:var(--muted); line-height:24px; text-align:right; padding-right:6px; }
 .comp-row input[type=range]{ flex:1; min-width:120px; }
-.comp-row span{ width:40px; font-size:12px; color:var(--text); text-align:right; line-height:24px; }
+.comp-row span{ width:42px; font-size:12px; color:var(--text); text-align:left; line-height:24px; padding-left:6px; }
 
 #tab-compress{ padding:0 2px; }
 .comp-row input[type=range]{ flex:1; }
