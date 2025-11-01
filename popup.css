@@ -11,7 +11,7 @@
 	--glass: rgba(255,255,255,0.03);
 	--shadow: 0 10px 30px rgba(2,6,23,0.6);
 }
-body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto; margin:0; padding:0; width:420px; background:linear-gradient(180deg,#071431 0%, #041127 100%); color:var(--text); }
+body{ font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto; margin:0; padding:0; width:600px; background:linear-gradient(180deg,#071431 0%, #041127 100%); color:var(--text); }
 
 /* header full-width */
 .header-strip{ width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:linear-gradient(90deg,#0ea5a3 0%, #6366f1 100%); color:rgba(255,255,255,0.98); }
@@ -34,7 +34,7 @@ select{ flex:1; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,
 .tab-content.active{ display:block; }
 
 /* EQ bands arranged vertically: slider on top, label below */
-#bands{ display:flex; flex-direction:row; gap:8px; max-height:340px; overflow-x:auto; overflow-y:hidden; padding:8px; align-items:flex-start; }
+#bands{ display:flex; flex-direction:row; gap:8px; max-height:340px; overflow-x:hidden; overflow-y:hidden; padding:8px; align-items:flex-start; }
 .band{ display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:flex-start; padding:10px 6px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); flex:0 0 auto; width:48px; min-height:220px; box-sizing:border-box; }
 .band label{ width:100%; font-size:11px; color:var(--muted); text-align:center; white-space:nowrap; order:2; }
 .band input[type=range]{ width:180px; height:20px; transform:rotate(-90deg); -webkit-transform:rotate(-90deg); transform-origin:50% 50%; -webkit-transform-origin:50% 50%; display:block; margin:90px 0; order:1; }
