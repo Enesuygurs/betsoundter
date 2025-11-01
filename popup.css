@@ -38,7 +38,7 @@ select{ flex:1; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,
 #bands{ display:flex; flex-direction:row; gap:8px; max-height:340px; overflow-x:hidden; overflow-y:hidden; padding:8px; align-items:flex-start; }
 .band{ display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:flex-start; padding:10px 6px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); flex:0 0 auto; width:48px; min-height:220px; box-sizing:border-box; }
 .band label{ width:100%; font-size:11px; color:var(--muted); text-align:center; white-space:nowrap; order:2; }
-.band input[type=range]{ width:180px; height:20px; transform:rotate(-90deg); -webkit-transform:rotate(-90deg); transform-origin:50% 50%; -webkit-transform-origin:50% 50%; display:block; margin:90px 0; order:1; }
+.band input[type=range]{ width:180px; height:20px; transform:rotate(-90deg); -webkit-transform:rotate(-90deg); transform-origin:50% 50%; -webkit-transform-origin:50% 50%; display:block; margin:90px auto; order:1; }
 .band .val{ display:none; }
 
 .comp-row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
@@ -71,7 +71,7 @@ input[type=range]:focus{ outline:none; }
 input[type=range]::-moz-range-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; }
 input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 4px 10px rgba(2,6,23,0.6); border:0; }
 /* Adjust thumb margin when slider is rotated */
-.band input[type=range]::-webkit-slider-thumb{ margin-top:0; }
+.band input[type=range]::-webkit-slider-thumb{ margin-top:-5px; margin-left:0; }
 .band input[type=range]::-moz-range-thumb{ margin-top:0; }
 
 /* responsive small width handling */
