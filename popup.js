@@ -10,8 +10,7 @@
       if(!tab){ if(cb) cb(null); return; }
       chrome.tabs.sendMessage(tab.id, msg, resp => {
         if(chrome.runtime.lastError){
-          // no content script in tab or other error; don't throw in popup
-          console.warn('sendMessage ->', chrome.runtime.lastError.message);
+          // no content script in tab or other error; ignore silently (avoid noisy console warnings)
           if(cb) cb(null);
         }else{
           if(cb) cb(resp);
