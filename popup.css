@@ -39,6 +39,13 @@ select{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,
 .band input[type=range]{ width:180px; height:20px; transform:rotate(-90deg); -webkit-transform:rotate(-90deg); transform-origin:50% 50%; -webkit-transform-origin:50% 50%; display:block; margin:90px -82px; order:1; }
 .band .val{ display:none; }
 
+#masterControls{ display:flex; align-items:center; gap:8px; margin:8px 0; }
+#masterControls label{ width:76px; font-size:13px; color:var(--muted); }
+#masterControls input[type=range]{ flex:1; }
+#masterControls span{ min-width:40px; font-size:12px; color:var(--text); }
+
+#compressControls label{ font-size:13px; color:var(--muted); font-weight:600; display:block; margin-bottom:8px; }
+
 .comp-row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
 .comp-row label{ width:76px; font-size:13px; color:var(--muted); }
 .comp-row input[type=range]{ flex:1; }
