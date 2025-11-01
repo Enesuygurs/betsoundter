@@ -43,13 +43,13 @@ select{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,
 .section-label{ font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px; padding:0 4px; }
 .section-content{ display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
 
-#masterControls{ display:flex; align-items:center; gap:2px; height:24px; }
-#masterControls label{ width:76px; font-size:13px; color:var(--muted); line-height:24px; }
+#masterControls{ display:flex; align-items:center; gap:6px; height:24px; }
+#masterControls label{ width:auto; min-width:60px; font-size:13px; color:var(--muted); line-height:24px; }
 #masterControls input[type=range]{ flex:1; min-width:120px; }
 #masterControls span{ width:40px; font-size:12px; color:var(--text); text-align:right; line-height:24px; }
 
-.comp-row{ display:flex; align-items:center; gap:2px; margin:0; height:24px; }
-.comp-row label{ width:76px; font-size:13px; color:var(--muted); line-height:24px; }
+.comp-row{ display:flex; align-items:center; gap:6px; margin:0; height:24px; }
+.comp-row label{ width:auto; min-width:60px; font-size:13px; color:var(--muted); line-height:24px; }
 .comp-row input[type=range]{ flex:1; min-width:120px; }
 .comp-row span{ width:40px; font-size:12px; color:var(--text); text-align:right; line-height:24px; }
 
