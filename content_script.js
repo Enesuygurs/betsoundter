@@ -40,6 +40,13 @@
     return master;
   }
 
+  // ensure AudioContext is running (some browsers start it suspended)
+  function ensureContextRunning(){
+    if(!ctx) return Promise.resolve();
+    if(ctx.state === 'running') return Promise.resolve();
+    return ctx.resume().catch(e => { /* ignore */ });
+  }
+
   function createFilters(){
     return bands.map(b => {
       const f = ctx.createBiquadFilter();
@@ -56,21 +63,45 @@
     if (elements.has(el._eqId)) return elements.get(el._eqId);
     try{
       const id = el._eqId = el._eqId || `eq-${nextId++}`;
-      const source = ctx.createMediaElementSource(el);
+      let source = null;
+      try{
+        source = ctx.createMediaElementSource(el);
+      }catch(e){
+        // fallback: try captureStream() and createMediaStreamSource
+        try{
+          if(typeof el.captureStream === 'function'){
+            const stream = el.captureStream();
+            source = ctx.createMediaStreamSource(stream);
+            console.debug('content_script: used captureStream fallback for', el);
+          }
+        }catch(e2){
+          // ignore
+        }
+      }
+
+      if(!source){
+        console.debug('content_script: could not create MediaElementSource for', el);
+        return null;
+      }
+
       const filters = createFilters();
       let node = source;
       for(const f of filters){
         node.connect(f);
         node = f;
       }
-  // connect into the shared master chain
-  const m = ensureMasterNodes();
-  node.connect(m.gain);
+      // connect into the shared master chain (ensure context running)
+      ensureContextRunning().then(()=>{
+        const m = ensureMasterNodes();
+        try{ node.connect(m.gain); }catch(e){ console.debug('content_script: failed to connect node to master gain', e); }
+      });
+
       const record = {id, el, source, filters};
       elements.set(id, record);
+      console.debug('content_script: attached eq to element', id, el);
       return record;
     }catch(e){
-      // Some media elements (e.g., cross-origin or already-attached) may throw
+      console.debug('content_script: attach threw', e, el);
       return null;
     }
   }
@@ -129,6 +160,9 @@
 
   // message handling from popup
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    // try to resume context on any incoming message (user interacted via popup)
+    ensureContextRunning();
+    console.debug('content_script: onMessage', msg);
     if(msg && msg.type === 'getMedia'){
       const list = [];
       for(const [id, rec] of elements.entries()){
@@ -157,6 +191,7 @@
 
     if(msg && msg.type === 'setMasterGain'){
       const m = ensureMasterNodes();
+      ensureContextRunning();
       m.gain.gain.value = Number(msg.gain) || 1.0;
       sendResponse({ok:true});
       return true;
@@ -177,6 +212,7 @@
     if(msg && msg.type === 'applyAutoFix'){
       // apply a conservative auto-fix: lower master gain and enable compressor with limiter-like settings
       const m = ensureMasterNodes();
+      ensureContextRunning();
       // reduce gain to avoid clipping (0.5 ~= -6dB)
       m.gain.gain.value = 0.5;
       // more aggressive compressor/limiter
