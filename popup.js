@@ -7,6 +7,9 @@
 
   const mediaSelect = document.getElementById('mediaSelect');
   const bandsWrap = document.getElementById('bands');
+  const masterGainInput = document.getElementById('masterGain');
+  const masterVal = document.getElementById('masterVal');
+  const autoFixBtn = document.getElementById('autoFixBtn');
   const refreshBtn = document.getElementById('refreshBtn');
   const resetBtn = document.getElementById('resetBtn');
   const applyAllBtn = document.getElementById('applyAllBtn');
@@ -53,6 +56,16 @@
     }
   }
 
+  // master gain change
+  function onMasterGainChange(v){
+    masterVal.textContent = Number(v).toFixed(2);
+    chrome.storage.sync.set({globalMasterGain: Number(v)});
+    chrome.tabs.query({active:true,currentWindow:true}, tabs => {
+      if(!tabs[0]) return;
+      chrome.tabs.sendMessage(tabs[0].id, {type:'setMasterGain', gain: Number(v)});
+    });
+  }
+
   function populateBands(saved){
     bandsWrap.innerHTML = '';
     for(let i=0;i<bands.length;i++){
@@ -81,9 +94,10 @@
   refreshBtn.addEventListener('click', ()=> refreshMediaList());
   resetBtn.addEventListener('click', ()=>{
     // reset storage & UI
-    chrome.storage.sync.set({globalBands:{}});
+    chrome.storage.sync.set({globalBands:{}, globalMasterGain:1, globalCompressor:{}});
     const ranges = bandsWrap.querySelectorAll('input[type=range]');
     ranges.forEach(r=>{ r.value=0; const v = r.parentElement.querySelector('.val'); if(v) v.textContent=0; });
+    if(masterGainInput){ masterGainInput.value = 1; masterVal.textContent = '1.00'; }
     // apply
     chrome.tabs.query({active:true,currentWindow:true}, tabs => { if(!tabs[0]) return; chrome.tabs.sendMessage(tabs[0].id, {type:'applyAll'}); });
   });
@@ -92,9 +106,27 @@
     chrome.tabs.query({active:true,currentWindow:true}, tabs => { if(!tabs[0]) return; chrome.tabs.sendMessage(tabs[0].id, {type:'applyAll'}); });
   });
 
+  if(masterGainInput){
+    masterGainInput.addEventListener('input', ()=> onMasterGainChange(masterGainInput.value));
+  }
+
+  autoFixBtn.addEventListener('click', ()=>{
+    // send applyAutoFix to page which also persists conservative settings
+    chrome.tabs.query({active:true,currentWindow:true}, tabs => { if(!tabs[0]) return; chrome.tabs.sendMessage(tabs[0].id, {type:'applyAutoFix'}, resp => { if(resp && resp.ok) {
+        // update UI to reflect applied persistent values
+        chrome.storage.sync.get(['globalMasterGain','globalCompressor'], data => {
+          if(data.globalMasterGain && masterGainInput){ masterGainInput.value = data.globalMasterGain; masterVal.textContent = Number(data.globalMasterGain).toFixed(2); }
+        });
+      }}); });
+  });
+
   // init: load stored bands & refresh media
   chrome.storage.sync.get(['globalBands'], data => {
     populateBands(data.globalBands || {});
+  });
+  // load master gain stored value
+  chrome.storage.sync.get(['globalMasterGain'], data => {
+    if(typeof data.globalMasterGain !== 'undefined' && masterGainInput){ masterGainInput.value = data.globalMasterGain; masterVal.textContent = Number(data.globalMasterGain).toFixed(2); }
   });
   refreshMediaList();
 

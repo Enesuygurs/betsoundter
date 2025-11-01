@@ -40,6 +40,25 @@
   const ctx = (window._eqAudioContext = window._eqAudioContext || new (window.AudioContext || window.webkitAudioContext)());
   const elements = new Map(); // id -> {el, source, filters}
   let nextId = 1;
+  // master nodes shared per page
+  const master = (window._eqMasterNodes = window._eqMasterNodes || { });
+
+  function ensureMasterNodes(){
+    if(master.gain && master.compressor) return master;
+    master.gain = ctx.createGain();
+    master.gain.gain.value = 1.0; // default unity
+    master.compressor = ctx.createDynamicsCompressor();
+    // default gentle compressor settings; can be tuned via messages
+    master.compressor.threshold.value = -12;
+    master.compressor.knee.value = 30;
+    master.compressor.ratio.value = 6;
+    master.compressor.attack.value = 0.003;
+    master.compressor.release.value = 0.25;
+    // connect chain: filters -> master.gain -> compressor -> destination
+    master.gain.connect(master.compressor);
+    master.compressor.connect(ctx.destination);
+    return master;
+  }
 
   function createFilters(){
     return bands.map(b => {
@@ -64,7 +83,9 @@
         node.connect(f);
         node = f;
       }
-      node.connect(ctx.destination);
+  // connect into the shared master chain
+  const m = ensureMasterNodes();
+  node.connect(m.gain);
       const record = {id, el, source, filters};
       elements.set(id, record);
       return record;
@@ -87,6 +108,21 @@
         const g = Number(globalBands[idx]) || 0;
         f.gain.value = g;
       });
+    });
+    // also apply master gain and compressor settings
+    chrome.storage.sync.get(['globalMasterGain','globalCompressor'], data => {
+      const m = ensureMasterNodes();
+      if(typeof data.globalMasterGain !== 'undefined') m.gain.gain.value = Number(data.globalMasterGain);
+      if(data.globalCompressor){
+        try{
+          const c = data.globalCompressor;
+          if(typeof c.threshold !== 'undefined') m.compressor.threshold.value = Number(c.threshold);
+          if(typeof c.knee !== 'undefined') m.compressor.knee.value = Number(c.knee);
+          if(typeof c.ratio !== 'undefined') m.compressor.ratio.value = Number(c.ratio);
+          if(typeof c.attack !== 'undefined') m.compressor.attack.value = Number(c.attack);
+          if(typeof c.release !== 'undefined') m.compressor.release.value = Number(c.release);
+        }catch(e){/* ignore */}
+      }
     });
   }
 
@@ -136,6 +172,49 @@
         if(rec.filters[msg.bandIndex]) rec.filters[msg.bandIndex].gain.value = Number(msg.gain) || 0;
       }
       sendResponse({ok:true});
+      return true;
+    }
+
+    if(msg && msg.type === 'setMasterGain'){
+      const m = ensureMasterNodes();
+      m.gain.gain.value = Number(msg.gain) || 1.0;
+      sendResponse({ok:true});
+      return true;
+    }
+
+    if(msg && msg.type === 'setCompressor'){ // {settings: {threshold,knee,ratio,attack,release}}
+      const m = ensureMasterNodes();
+      const s = msg.settings || {};
+      if(typeof s.threshold !== 'undefined') m.compressor.threshold.value = Number(s.threshold);
+      if(typeof s.knee !== 'undefined') m.compressor.knee.value = Number(s.knee);
+      if(typeof s.ratio !== 'undefined') m.compressor.ratio.value = Number(s.ratio);
+      if(typeof s.attack !== 'undefined') m.compressor.attack.value = Number(s.attack);
+      if(typeof s.release !== 'undefined') m.compressor.release.value = Number(s.release);
+      sendResponse({ok:true});
+      return true;
+    }
+
+    if(msg && msg.type === 'applyAutoFix'){
+      // apply a conservative auto-fix: lower master gain and enable compressor with limiter-like settings
+      const m = ensureMasterNodes();
+      // reduce gain to avoid clipping (0.5 ~= -6dB)
+      m.gain.gain.value = 0.5;
+      // more aggressive compressor/limiter
+      m.compressor.threshold.value = -18;
+      m.compressor.knee.value = 0;
+      m.compressor.ratio.value = 12;
+      m.compressor.attack.value = 0.001;
+      m.compressor.release.value = 0.05;
+      // persist these settings
+      chrome.storage.sync.set({globalMasterGain: m.gain.gain.value, globalCompressor:{threshold: m.compressor.threshold.value, knee: m.compressor.knee.value, ratio: m.compressor.ratio.value, attack: m.compressor.attack.value, release: m.compressor.release.value}});
+      // also apply stored band settings (in case we want to reduce harsh bands)
+      chrome.storage.sync.get(['globalBands'], data => {
+        const globalBands = data.globalBands || {};
+        for(const rec of elements.values()){
+          rec.filters.forEach((f, idx) => { f.gain.value = Number(globalBands[idx]) || 0; });
+        }
+        sendResponse({ok:true});
+      });
       return true;
     }
 

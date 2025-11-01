@@ -19,6 +19,13 @@
 
       <div id="bands"></div>
 
+        <div id="masterControls">
+          <label for="masterGain">Master gain</label>
+          <input id="masterGain" type="range" min="0" max="2" step="0.01" value="1">
+          <span id="masterVal">1.00</span>
+          <button id="autoFixBtn">Auto-fix (reduce clipping)</button>
+        </div>
+
       <div class="footer">
         <button id="resetBtn">Reset</button>
         <button id="applyAllBtn">Apply to all</button>
