@@ -241,17 +241,41 @@
     loadPresets(ps => {
       const p = ps[name]; if(!p) return;
       // apply bands
-      if(p.bands){ for(const k in p.bands){ globalBandsLocal[k] = Number(p.bands[k]); } }
+      if(p.bands){ 
+        for(const k in p.bands){ 
+          globalBandsLocal[k] = Number(p.bands[k]);
+          // Send each band change immediately
+          sendToActiveTab({type:'setAllBands', bandIndex: Number(k), gain: Number(p.bands[k])});
+        } 
+      }
       // update UI sliders
       const ranges = bandsWrap.querySelectorAll('input[type=range]');
-      ranges.forEach(r=>{ const idx = r.dataset.band; if(typeof globalBandsLocal[idx] !== 'undefined') { r.value = globalBandsLocal[idx]; const v = r.parentElement.querySelector('.val'); if(v) v.textContent = r.value; } });
+      ranges.forEach(r=>{ 
+        const idx = r.dataset.band; 
+        if(typeof globalBandsLocal[idx] !== 'undefined') { 
+          r.value = globalBandsLocal[idx]; 
+          const v = r.parentElement.querySelector('.val'); 
+          if(v) v.textContent = r.value; 
+        } 
+      });
       // persist debounced
       scheduleSaveBands();
-      // apply to page
-      sendToActiveTab({type:'applyAll'});
       // master & compressor
-      if(p.masterGain && masterGainInput){ masterGainInput.value = p.masterGain; masterVal.textContent = Number(p.masterGain).toFixed(2); sendToActiveTab({type:'setMasterGain', gain: p.masterGain}); scheduleSaveMaster(p.masterGain); }
-      if(p.compressor){ if(compThreshold) compThreshold.value = p.compressor.threshold; if(compRatio) compRatio.value = p.compressor.ratio; if(compAttack) compAttack.value = p.compressor.attack; if(compRelease) compRelease.value = p.compressor.release; updateCompUI(); sendToActiveTab({type:'setCompressor', settings: p.compressor}); chrome.storage.sync.set({globalCompressor: p.compressor}); }
+      if(p.masterGain && masterGainInput){ 
+        masterGainInput.value = p.masterGain; 
+        masterVal.textContent = Number(p.masterGain).toFixed(2); 
+        sendToActiveTab({type:'setMasterGain', gain: p.masterGain}); 
+        scheduleSaveMaster(p.masterGain); 
+      }
+      if(p.compressor){ 
+        if(compThreshold) compThreshold.value = p.compressor.threshold; 
+        if(compRatio) compRatio.value = p.compressor.ratio; 
+        if(compAttack) compAttack.value = p.compressor.attack; 
+        if(compRelease) compRelease.value = p.compressor.release; 
+        updateCompUI(); 
+        sendToActiveTab({type:'setCompressor', settings: p.compressor}); 
+        chrome.storage.sync.set({globalCompressor: p.compressor}); 
+      }
     });
   }
 
