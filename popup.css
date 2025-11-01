@@ -35,9 +35,9 @@ select{ flex:1; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,
 
 /* EQ bands arranged vertically: label on top, vertical slider, value below */
 #bands{ display:flex; flex-direction:row; gap:12px; max-height:320px; overflow:auto; padding:8px; }
-.band{ display:flex; flex-direction:column; gap:8px; align-items:center; padding:8px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); min-width:56px; }
+.band{ display:flex; flex-direction:column; gap:8px; align-items:center; padding:8px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); min-width:80px; }
 .band label{ width:auto; font-size:12px; color:var(--muted); text-align:center; }
-.band input[type=range]{ width:120px; height:36px; transform: rotate(-90deg); -webkit-transform: rotate(-90deg); }
+.band input[type=range]{ width:140px; height:28px; transform: rotate(-90deg); -webkit-transform: rotate(-90deg); transform-origin:center center; -webkit-transform-origin:center center; display:block; margin:6px 0; }
 .band .val{ width:48px; text-align:center; font-size:12px; color:var(--muted); }
 
 .comp-row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
@@ -63,10 +63,15 @@ button.danger{ background:linear-gradient(90deg,#fb7185,#f97316); color:#071022;
 .preset-item button{ padding:6px 10px; border-radius:8px; }
 
 /* range input styling */
-input[type=range]{ -webkit-appearance:none; background:transparent; height:28px; }
+input[type=range]{ appearance:none; -webkit-appearance:none; -moz-appearance:none; background:transparent; height:28px; }
 input[type=range]::-webkit-slider-runnable-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; }
-input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#fff; margin-top:-5px; box-shadow:0 4px 10px rgba(2,6,23,0.6); }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:#fff; margin-top:-5px; box-shadow:0 4px 10px rgba(2,6,23,0.6); }
 input[type=range]:focus{ outline:none; }
+input[type=range]::-moz-range-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; }
+input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 4px 10px rgba(2,6,23,0.6); border:0; }
+/* Adjust thumb margin when slider is rotated */
+.band input[type=range]::-webkit-slider-thumb{ margin-top:0; }
+.band input[type=range]::-moz-range-thumb{ margin-top:0; }
 
 /* responsive small width handling */
 @media (max-width:420px){ body{ width:380px; } }
