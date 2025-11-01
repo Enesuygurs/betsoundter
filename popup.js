@@ -23,11 +23,21 @@
   const bandsWrap = document.getElementById('bands');
   const masterGainInput = document.getElementById('masterGain');
   const masterVal = document.getElementById('masterVal');
-  const autoFixBtn = document.getElementById('autoFixBtn');
-  const autoEQBtn = document.getElementById('autoEQBtn');
   const refreshBtn = document.getElementById('refreshBtn');
   const resetBtn = document.getElementById('resetBtn');
   const applyAllBtn = document.getElementById('applyAllBtn');
+  // tabs
+  const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+  const tabContents = Array.from(document.querySelectorAll('.tab-content'));
+  const compThreshold = document.getElementById('compThreshold');
+  const compThresholdVal = document.getElementById('compThresholdVal');
+  const compRatio = document.getElementById('compRatio');
+  const compRatioVal = document.getElementById('compRatioVal');
+  const compAttack = document.getElementById('compAttack');
+  const compAttackVal = document.getElementById('compAttackVal');
+  const compRelease = document.getElementById('compRelease');
+  const compReleaseVal = document.getElementById('compReleaseVal');
+  
 
   // local cache of band gains to batch writes and avoid storage quota errors
   const globalBandsLocal = {};
@@ -137,29 +147,26 @@
     masterGainInput.addEventListener('input', ()=> onMasterGainChange(masterGainInput.value));
   }
 
-  autoFixBtn.addEventListener('click', ()=>{
-    // send applyAutoFix to page which also persists conservative settings
-    sendToActiveTab({type:'applyAutoFix'}, resp => {
-      if(resp && resp.ok){
-        // update UI to reflect applied persistent values
-        chrome.storage.sync.get(['globalMasterGain','globalCompressor'], data => {
-          if(data.globalMasterGain && masterGainInput){ masterGainInput.value = data.globalMasterGain; masterVal.textContent = Number(data.globalMasterGain).toFixed(2); }
-        });
-      }
-    });
-  });
+  // tab switching
+  tabButtons.forEach(btn => btn.addEventListener('click', ()=>{
+    const tab = btn.dataset.tab;
+    tabButtons.forEach(b=>b.classList.toggle('active', b===btn));
+    tabContents.forEach(c=> c.classList.toggle('active', c.id === `tab-${tab}`));
+  }));
 
-  if(autoEQBtn){
-    autoEQBtn.addEventListener('click', ()=>{
-      // request content script to analyze and attenuate harsh bands
-      sendToActiveTab({type:'applyAutoEQ'}, resp => {
-        // resp may be null if no content script; otherwise we can inform the user
-        if(!resp) return;
-        // optional: show number of adjusted bands in UI (not implemented visually)
-        console.log('Auto-EQ result', resp);
-      });
-    });
+  // compressor controls wiring
+  function updateCompUI(){
+    if(compThreshold) compThresholdVal.textContent = compThreshold.value;
+    if(compRatio) compRatioVal.textContent = compRatio.value;
+    if(compAttack) compAttackVal.textContent = compAttack.value;
+    if(compRelease) compReleaseVal.textContent = compRelease.value;
   }
+  if(compThreshold) compThreshold.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{threshold: Number(compThreshold.value)}}); });
+  if(compRatio) compRatio.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{ratio: Number(compRatio.value)}}); });
+  if(compAttack) compAttack.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{attack: Number(compAttack.value)}}); });
+  if(compRelease) compRelease.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{release: Number(compRelease.value)}}); });
+
+  // (auto buttons removed) compressor values loaded below
 
   // init: load stored bands & refresh media
   chrome.storage.sync.get(['globalBands'], data => {
@@ -171,6 +178,15 @@
   // load master gain stored value
   chrome.storage.sync.get(['globalMasterGain'], data => {
     if(typeof data.globalMasterGain !== 'undefined' && masterGainInput){ masterGainInput.value = data.globalMasterGain; masterVal.textContent = Number(data.globalMasterGain).toFixed(2); }
+  });
+  // load compressor stored values
+  chrome.storage.sync.get(['globalCompressor'], data => {
+    const c = data.globalCompressor || {};
+    if(compThreshold && typeof c.threshold !== 'undefined') compThreshold.value = c.threshold;
+    if(compRatio && typeof c.ratio !== 'undefined') compRatio.value = c.ratio;
+    if(compAttack && typeof c.attack !== 'undefined') compAttack.value = c.attack;
+    if(compRelease && typeof c.release !== 'undefined') compRelease.value = c.release;
+    updateCompUI();
   });
   refreshMediaList();
 
