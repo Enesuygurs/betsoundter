@@ -65,11 +65,23 @@ button.danger{ background:linear-gradient(90deg,#fb7185,#f97316); color:#071022;
 
 /* range input styling */
 input[type=range]{ appearance:none; -webkit-appearance:none; -moz-appearance:none; background:transparent; height:28px; }
-input[type=range]::-webkit-slider-runnable-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; }
+input[type=range]::-webkit-slider-runnable-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; position:relative; }
 input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:#fff; margin-top:-5px; box-shadow:0 4px 10px rgba(2,6,23,0.6); }
 input[type=range]:focus{ outline:none; }
 input[type=range]::-moz-range-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; }
 input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 4px 10px rgba(2,6,23,0.6); border:0; }
+
+/* Grid markers for snap points - show visual grid on track */
+.band input[type=range]{
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent calc(20% - 1px),
+    rgba(255,255,255,0.3) calc(20% - 1px),
+    rgba(255,255,255,0.3) 20%
+  );
+}
+
 /* Adjust thumb margin when slider is rotated */
 .band input[type=range]::-webkit-slider-thumb{ margin-top:-5px; margin-left:0; }
 .band input[type=range]::-moz-range-thumb{ margin-top:0; }
