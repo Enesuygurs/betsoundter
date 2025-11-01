@@ -37,6 +37,9 @@
   const compAttackVal = document.getElementById('compAttackVal');
   const compRelease = document.getElementById('compRelease');
   const compReleaseVal = document.getElementById('compReleaseVal');
+  const presetNameInput = document.getElementById('presetName');
+  const savePresetBtn = document.getElementById('savePresetBtn');
+  const presetList = document.getElementById('presetList');
   
 
   // local cache of band gains to batch writes and avoid storage quota errors
@@ -165,6 +168,77 @@
   if(compRatio) compRatio.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{ratio: Number(compRatio.value)}}); });
   if(compAttack) compAttack.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{attack: Number(compAttack.value)}}); });
   if(compRelease) compRelease.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{release: Number(compRelease.value)}}); });
+
+  // presets: save, apply, delete
+  function renderPresets(presets){
+    presetList.innerHTML = '';
+    const names = Object.keys(presets || {});
+    if(names.length === 0){ presetList.innerHTML = '<div class="small">No presets saved.</div>'; return; }
+    names.forEach(name => {
+      const p = presets[name];
+      const item = document.createElement('div'); item.className = 'preset-item';
+      const span = document.createElement('div'); span.className='name'; span.textContent = name;
+      const actions = document.createElement('div'); actions.className='actions';
+      const applyBtn = document.createElement('button'); applyBtn.textContent = 'Apply';
+      const delBtn = document.createElement('button'); delBtn.textContent = 'Delete';
+      applyBtn.addEventListener('click', ()=> applyPreset(name));
+      delBtn.addEventListener('click', ()=> deletePreset(name));
+      actions.appendChild(applyBtn); actions.appendChild(delBtn);
+      item.appendChild(span); item.appendChild(actions);
+      presetList.appendChild(item);
+    });
+  }
+
+  function loadPresets(cb){
+    chrome.storage.sync.get(['presets'], data => { const ps = data.presets || {}; if(cb) cb(ps); });
+  }
+
+  function savePreset(name){
+    if(!name) return;
+    // capture current settings
+    const preset = {};
+    preset.bands = {};
+    // copy local bands cache
+    for(const k in globalBandsLocal) preset.bands[k] = globalBandsLocal[k];
+    // master gain
+    preset.masterGain = masterGainInput ? Number(masterGainInput.value) : 1;
+    // compressor UI values
+    preset.compressor = {
+      threshold: compThreshold ? Number(compThreshold.value) : -12,
+      ratio: compRatio ? Number(compRatio.value) : 6,
+      attack: compAttack ? Number(compAttack.value) : 0.003,
+      release: compRelease ? Number(compRelease.value) : 0.25
+    };
+    // store
+    loadPresets(ps => { ps[name] = preset; chrome.storage.sync.set({presets: ps}, ()=>{ renderPresets(ps); }); });
+  }
+
+  function applyPreset(name){
+    loadPresets(ps => {
+      const p = ps[name]; if(!p) return;
+      // apply bands
+      if(p.bands){ for(const k in p.bands){ globalBandsLocal[k] = Number(p.bands[k]); } }
+      // update UI sliders
+      const ranges = bandsWrap.querySelectorAll('input[type=range]');
+      ranges.forEach(r=>{ const idx = r.dataset.band; if(typeof globalBandsLocal[idx] !== 'undefined') { r.value = globalBandsLocal[idx]; const v = r.parentElement.querySelector('.val'); if(v) v.textContent = r.value; } });
+      // persist debounced
+      scheduleSaveBands();
+      // apply to page
+      sendToActiveTab({type:'applyAll'});
+      // master & compressor
+      if(p.masterGain && masterGainInput){ masterGainInput.value = p.masterGain; masterVal.textContent = Number(p.masterGain).toFixed(2); sendToActiveTab({type:'setMasterGain', gain: p.masterGain}); scheduleSaveMaster(p.masterGain); }
+      if(p.compressor){ if(compThreshold) compThreshold.value = p.compressor.threshold; if(compRatio) compRatio.value = p.compressor.ratio; if(compAttack) compAttack.value = p.compressor.attack; if(compRelease) compRelease.value = p.compressor.release; updateCompUI(); sendToActiveTab({type:'setCompressor', settings: p.compressor}); chrome.storage.sync.set({globalCompressor: p.compressor}); }
+    });
+  }
+
+  function deletePreset(name){
+    loadPresets(ps => { if(ps[name]){ delete ps[name]; chrome.storage.sync.set({presets: ps}, ()=>{ renderPresets(ps); }); } });
+  }
+
+  if(savePresetBtn){ savePresetBtn.addEventListener('click', ()=>{ const n = presetNameInput.value && presetNameInput.value.trim(); if(n) { savePreset(n); presetNameInput.value = ''; } }); }
+
+  // load presets on init
+  loadPresets(ps => renderPresets(ps));
 
   // (auto buttons removed) compressor values loaded below
 

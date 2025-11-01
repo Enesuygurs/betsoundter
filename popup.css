@@ -24,3 +24,16 @@ button{ padding:8px 10px; border-radius:8px; border:0; background:#eef2ff; color
 button:hover{ filter:brightness(0.98); }
 
 .small{ font-size:12px; color:#64748b; }
+
+/* header strip */
+.header-strip{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:linear-gradient(90deg,#eef2ff,#f7fbff); border-bottom:1px solid #e6eefc; }
+.header-strip .title{ font-weight:700; color:#0f1724; }
+.header-strip .version{ font-size:12px; color:#64748b; }
+
+.preset-row{ display:flex; gap:8px; margin-bottom:8px; }
+.preset-row input{ flex:1; padding:8px; border-radius:8px; border:1px solid #e2e8f0; }
+.preset-list{ display:flex; flex-direction:column; gap:6px; max-height:160px; overflow:auto; margin-bottom:8px; }
+.preset-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border-radius:8px; background:#f8fafc; border:1px solid #eef2ff; }
+.preset-item .name{ font-weight:600; color:#0f1724; }
+.preset-item .actions{ display:flex; gap:6px; }
+.preset-item button{ padding:6px 8px; border-radius:6px; background:#eef2ff; border:0; }
