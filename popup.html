@@ -12,14 +12,6 @@
       <button id="resetBtn" style="background:transparent; border:1px solid rgba(255,255,255,0.2); color:#e6eefc; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:600;">Reset</button>
     </div>
     <div class="container">
-      <div id="mediaListWrap">
-        <label for="mediaSelect">Media element:</label>
-        <select id="mediaSelect">
-          <option value="all">All tabs / elements</option>
-        </select>
-        <button id="refreshBtn">Refresh</button>
-      </div>
-
       <div class="tabs">
         <div class="tab-headers">
           <button class="tab-btn active" data-tab="eq">EQ</button>
@@ -55,6 +47,13 @@
           </div>
           <div id="tab-settings" class="tab-content">
             <div id="settingsWrap">
+              <div class="preset-row">
+                <label for="mediaSelect">Media element:</label>
+                <select id="mediaSelect" style="flex:1;">
+                  <option value="all">All tabs / elements</option>
+                </select>
+                <button id="refreshBtn" style="padding:6px 10px; font-size:12px;">Refresh</button>
+              </div>
               <div class="preset-row">
                 <input id="presetName" placeholder="Preset name" />
                 <button id="savePresetBtn">Save preset</button>
