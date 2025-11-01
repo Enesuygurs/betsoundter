@@ -59,7 +59,9 @@
     const div = document.createElement('div');
     div.className = 'band';
     const label = document.createElement('label');
-    label.textContent = freq + ' Hz';
+    // Format frequency: 1000+ Hz as K (e.g., 1000 Hz = 1K, 16000 Hz = 16K)
+    const freqLabel = freq >= 1000 ? (freq / 1000) + 'K' : freq + ' Hz';
+    label.textContent = freqLabel;
   const range = document.createElement('input');
   range.type = 'range';
   range.min = -12; range.max = 12; range.step = 0.5;
