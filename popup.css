@@ -34,10 +34,11 @@ select{ flex:1; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,
 .tab-content.active{ display:block; }
 
 /* EQ bands arranged vertically: label on top, vertical slider, value below */
-#bands{ display:flex; flex-direction:row; gap:14px; max-height:340px; overflow:auto; padding:8px; align-items:flex-end; }
-.band{ display:flex; flex-direction:column; gap:8px; align-items:center; padding:10px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); flex:0 0 140px; width:140px; box-sizing:border-box; min-width:64px; }
-.band label{ width:auto; font-size:12px; color:var(--muted); text-align:center; }
-.band input[type=range]{ width:160px; height:28px; transform: rotate(-90deg); -webkit-transform: rotate(-90deg); transform-origin:center center; -webkit-transform-origin:center center; display:block; margin:6px 0; }
+#bands{ display:flex; flex-direction:row; gap:8px; max-height:340px; overflow-x:auto; overflow-y:hidden; padding:8px; align-items:flex-start; }
+.band{ display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:flex-start; padding:10px 6px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); flex:0 0 auto; width:48px; min-height:220px; box-sizing:border-box; }
+.band label{ width:100%; font-size:11px; color:var(--muted); text-align:center; white-space:nowrap; }
+.band input[type=range]{ width:180px; height:20px; transform:rotate(-90deg); -webkit-transform:rotate(-90deg); transform-origin:50% 50%; -webkit-transform-origin:50% 50%; display:block; margin:90px 0; }
+.band .val{ width:100%; text-align:center; font-size:11px; color:var(--text); font-weight:600; }
 
 .comp-row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
 .comp-row label{ width:76px; font-size:13px; color:var(--muted); }
