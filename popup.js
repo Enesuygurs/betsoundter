@@ -31,7 +31,6 @@
   const masterVal = document.getElementById('masterVal');
   const refreshBtn = document.getElementById('refreshBtn');
   const resetBtn = document.getElementById('resetBtn');
-  const applyAllBtn = document.getElementById('applyAllBtn');
   const bandModeSelect = document.getElementById('bandModeSelect');
   // tabs
   const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
@@ -83,17 +82,11 @@
   }
 
   function onBandChange(bandIndex, gain){
-    const selected = mediaSelect.value;
-    // update local cache and schedule save (debounced) to avoid hitting storage quota
+    // Always apply to all elements immediately
     globalBandsLocal[bandIndex] = Number(gain);
     scheduleSaveBands();
-
-    // apply to either selected element or all (send immediately for responsiveness)
-    if(selected === 'all'){
-      sendToActiveTab({type:'setAllBands', bandIndex, gain});
-    }else{
-      sendToActiveTab({type:'setBand', id:selected, bandIndex, gain});
-    }
+    // Always send to all tabs/elements
+    sendToActiveTab({type:'setAllBands', bandIndex, gain});
   }
 
   // master gain change
@@ -152,8 +145,6 @@
     // apply
     sendToActiveTab({type:'applyAll'});
   });
-
-  applyAllBtn.addEventListener('click', ()=>{ sendToActiveTab({type:'applyAll'}); });
 
   // Band mode switcher
   if(bandModeSelect){
