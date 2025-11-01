@@ -33,11 +33,12 @@ select{ flex:1; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,
 .tab-content{ display:none; }
 .tab-content.active{ display:block; }
 
-#bands{ display:flex; flex-direction:column; gap:8px; max-height:320px; overflow:auto; padding-right:6px; }
-.band{ display:flex; gap:8px; align-items:center; padding:8px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
-.band label{ width:76px; font-size:13px; color:var(--muted); }
-.band input[type=range]{ flex:1; }
-.band .val{ width:42px; text-align:right; font-size:13px; color:var(--muted); }
+/* EQ bands arranged vertically: label on top, vertical slider, value below */
+#bands{ display:flex; flex-direction:row; gap:12px; max-height:320px; overflow:auto; padding:8px; }
+.band{ display:flex; flex-direction:column; gap:8px; align-items:center; padding:8px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); min-width:56px; }
+.band label{ width:auto; font-size:12px; color:var(--muted); text-align:center; }
+.band input[type=range]{ width:120px; height:36px; transform: rotate(-90deg); -webkit-transform: rotate(-90deg); }
+.band .val{ width:48px; text-align:center; font-size:12px; color:var(--muted); }
 
 .comp-row{ display:flex; align-items:center; gap:8px; margin:8px 0; }
 .comp-row label{ width:76px; font-size:13px; color:var(--muted); }
