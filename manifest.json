@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Simple Audio Equalizer",
+  "version": "0.1.0",
+  "description": "Adjust frequency bands of media playing in pages (simple equalizer).",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Audio Equalizer"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content_script.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

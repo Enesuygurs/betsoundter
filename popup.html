@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Audio Equalizer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Equalizer</h1>
+      <div id="mediaListWrap">
+        <label for="mediaSelect">Media element:</label>
+        <select id="mediaSelect">
+          <option value="all">All tabs / elements</option>
+        </select>
+        <button id="refreshBtn">Refresh</button>
+      </div>
+
+      <div id="bands"></div>
+
+      <div class="footer">
+        <button id="resetBtn">Reset</button>
+        <button id="applyAllBtn">Apply to all</button>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
