@@ -302,7 +302,7 @@
 
   // Create a shareable URL/string for a single preset
   // Use a custom scheme so the link is clearly non-web and cannot be claimed as a domain.
-  // Format: betsoundter://preset#<base64url>
+  // Format: betsoundter://preset#<base64url> (share from BetSoundTer)
   function createShareStringForPreset(name, preset){
     const obj = {};
     obj[name] = preset;
@@ -336,8 +336,8 @@
     s = s.trim();
     let candidate = s;
     try{
-      // Accept fragment (#...), query param (data=...), raw base64, or our custom scheme (betsoundter://)
-      // If the user pasted a betsoundter:// URL, extract the encoded payload from fragment or path.
+  // Accept fragment (#...), query param (data=...), raw base64, or our custom scheme (betsoundter://)
+  // If the user pasted a betsoundter:// URL (from BetSoundTer), extract the encoded payload from fragment or path.
       if(s.startsWith('betsoundter://')){
         // remove scheme
         let tail = s.slice('betsoundter://'.length);

@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "Simple Audio Equalizer",
-  "version": "0.1.0",
-  "description": "Adjust frequency bands of media playing in pages (simple equalizer).",
+  "name": "BetSoundTer",
+  "version": "1.0.0",
+  "description": "BetSoundTer - adjust frequency bands of media playing in pages.",
   "permissions": [
     "storage",
     "activeTab"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Audio Equalizer"
+  "default_title": "BetSoundTer"
   },
   "content_scripts": [
     {
