@@ -301,14 +301,14 @@
   }
 
   // Create a shareable URL/string for a single preset
-  // Use the reserved ".invalid" TLD so the domain can never be registered.
+  // Use a custom scheme so the link is clearly non-web and cannot be claimed as a domain.
+  // Format: betsoundter://preset#<base64url>
   function createShareStringForPreset(name, preset){
     const obj = {};
     obj[name] = preset;
     const json = JSON.stringify(obj);
     const enc = base64UrlEncode(json);
-    // Example: https://preset.invalid/preset#<base64url>
-    return `https://preset.invalid/preset#${enc}`;
+    return `betsoundter://preset#${enc}`;
   }
 
   function copyTextToClipboard(text){
@@ -336,13 +336,32 @@
     s = s.trim();
     let candidate = s;
     try{
-      const hashIdx = s.indexOf('#');
-      if(hashIdx >= 0) candidate = s.slice(hashIdx+1);
-      else{
-        const qIdx = s.indexOf('?');
-        if(qIdx >= 0){
-          const qs = s.slice(qIdx+1).split('&');
-          for(const part of qs){ if(part.startsWith('data=')){ candidate = decodeURIComponent(part.slice(5)); break; } }
+      // Accept fragment (#...), query param (data=...), raw base64, or our custom scheme (betsoundter://)
+      // If the user pasted a betsoundter:// URL, extract the encoded payload from fragment or path.
+      if(s.startsWith('betsoundter://')){
+        // remove scheme
+        let tail = s.slice('betsoundter://'.length);
+        // if there's a fragment in the full string, prefer that
+        const fullHash = s.indexOf('#');
+        if(fullHash >= 0){ candidate = s.slice(fullHash+1); }
+        else {
+          // drop optional leading "preset" segment
+          if(tail.startsWith('preset/')) tail = tail.slice('preset/'.length);
+          else if(tail.startsWith('preset')) tail = tail.slice('preset'.length);
+          // trim leading slashes
+          tail = tail.replace(/^\/+/, '');
+          candidate = tail;
+        }
+      } else {
+        const hashIdx = s.indexOf('#');
+        if(hashIdx >= 0) candidate = s.slice(hashIdx+1);
+        else{
+          // try query param data=
+          const qIdx = s.indexOf('?');
+          if(qIdx >= 0){
+            const qs = s.slice(qIdx+1).split('&');
+            for(const part of qs){ if(part.startsWith('data=')){ candidate = decodeURIComponent(part.slice(5)); break; } }
+          }
         }
       }
       const decoded = base64UrlDecode(candidate);
