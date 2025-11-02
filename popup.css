@@ -92,7 +92,7 @@ button.primary, button.ghost, button.danger{
 .preset-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
 .preset-item .name{ font-weight:700; color:var(--text); }
 .preset-item .actions{ display:flex; gap:8px; }
-.preset-item button{ padding:6px 10px; border-radius:8px; }
+.preset-item button{ padding:6px 10px;}
 
 input[type=range]{ appearance:none; -webkit-appearance:none; -moz-appearance:none; background:transparent; height:24px; margin:0; padding:0; }
 input[type=range]::-webkit-slider-runnable-track{ height:6px; background:linear-gradient(90deg,var(--accent),var(--accent-2)); border-radius:6px; }
