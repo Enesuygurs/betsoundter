@@ -72,7 +72,8 @@
     label.textContent = freqLabel;
     const range = document.createElement('input');
     range.type = 'range';
-    range.min = -12; range.max = 12; range.step = 0.5;
+    // Set full range to -40..40 per user request, keep step at 0.5
+    range.min = -40; range.max = 40; range.step = 0.5;
     range.value = value || 0;
     range.dataset.band = idx;
     const val = document.createElement('div'); val.className='val'; val.textContent = range.value;
