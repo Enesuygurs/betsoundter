@@ -1,9 +1,4 @@
-// content_script.js
-// Attaches a WebAudio graph to media elements and exposes simple RPC via chrome.runtime messages
-
 (function(){
-  // 10-band equalizer frequencies requested by user
-  // Using common 1/1-octave center frequencies: 32,64,125,250,500,1k,2k,4k,8k,16k
   const bands = [
     {freq: 32, type: 'lowshelf'},
     {freq: 64, type: 'peaking'},
@@ -18,32 +13,30 @@
   ];
 
   const ctx = (window._eqAudioContext = window._eqAudioContext || new (window.AudioContext || window.webkitAudioContext)());
-  const elements = new Map(); // id -> {el, source, filters}
+  const elements = new Map();
   let nextId = 1;
-  // master nodes shared per page
+  
   const master = (window._eqMasterNodes = window._eqMasterNodes || { });
 
   function ensureMasterNodes(){
     if(master.gain && master.compressor) return master;
     master.gain = ctx.createGain();
-    master.gain.gain.value = 1.0; // default unity
+  master.gain.gain.value = 1.0;
     master.compressor = ctx.createDynamicsCompressor();
-    // analyser for auto-EQ
+    
     master.analyser = ctx.createAnalyser();
     master.analyser.fftSize = 2048;
     master.analyser.smoothingTimeConstant = 0.3;
-    // waveshaper limiter (soft clip)
+    
     master.waveshaper = ctx.createWaveShaper();
     master.waveshaper.curve = makeSoftClipperCurve(4096, 0.5);
     master.waveshaper.oversample = '4x';
-    // default gentle compressor settings; can be tuned via messages
-    master.compressor.threshold.value = -12;
+  master.compressor.threshold.value = -12;
     master.compressor.knee.value = 30;
     master.compressor.ratio.value = 6;
     master.compressor.attack.value = 0.003;
     master.compressor.release.value = 0.25;
-    // connect chain: filters -> master.gain -> compressor -> waveshaper -> destination
-    // also tap analyser from master.gain so it sees post-filter summed signal
+    
     master.gain.connect(master.analyser);
     master.gain.connect(master.compressor);
     master.compressor.connect(master.waveshaper);
@@ -56,17 +49,16 @@
     const k = typeof amount === 'number' ? amount : 0.5;
     for(let i=0;i<samples;i++){
       const x = (i * 2 / samples) - 1;
-      // soft clipping formula
-      curve[i] = (Math.sign(x) * (1 - Math.exp(-Math.abs(x) * k)));
+        curve[i] = (Math.sign(x) * (1 - Math.exp(-Math.abs(x) * k)));
     }
     return curve;
   }
 
-  // ensure AudioContext is running (some browsers start it suspended)
+  
   function ensureContextRunning(){
     if(!ctx) return Promise.resolve();
     if(ctx.state === 'running') return Promise.resolve();
-    return ctx.resume().catch(e => { /* ignore */ });
+  return ctx.resume().catch(e => {});
   }
 
   function createFilters(){
@@ -74,9 +66,8 @@
       const f = ctx.createBiquadFilter();
       f.type = b.type;
       f.frequency.value = b.freq;
-      // default Q and gain. With many bands, a moderate Q provides reasonable overlap.
-      f.Q.value = 1.0;
-      f.gain.value = 0;
+  f.Q.value = 1.0;
+  f.gain.value = 0;
       return f;
     });
   }
@@ -87,19 +78,17 @@
       const id = el._eqId = el._eqId || `eq-${nextId++}`;
       let source = null;
       try{
-        source = ctx.createMediaElementSource(el);
-      }catch(e){
-        // fallback: try captureStream() and createMediaStreamSource
-        try{
-          if(typeof el.captureStream === 'function'){
-            const stream = el.captureStream();
-            source = ctx.createMediaStreamSource(stream);
-            console.debug('content_script: used captureStream fallback for', el);
+          source = ctx.createMediaElementSource(el);
+        }catch(e){
+          try{
+            if(typeof el.captureStream === 'function'){
+              const stream = el.captureStream();
+              source = ctx.createMediaStreamSource(stream);
+              console.debug('content_script: used captureStream fallback for', el);
+            }
+          }catch(e2){
           }
-        }catch(e2){
-          // ignore
         }
-      }
 
       if(!source){
         console.debug('content_script: could not create MediaElementSource for', el);
@@ -112,7 +101,7 @@
         node.connect(f);
         node = f;
       }
-      // connect into the shared master chain (ensure context running)
+      
       ensureContextRunning().then(()=>{
         const m = ensureMasterNodes();
         try{ node.connect(m.gain); }catch(e){ console.debug('content_script: failed to connect node to master gain', e); }
@@ -133,7 +122,7 @@
     medias.forEach(m => attach(m));
   }
 
-  // apply stored global band gains on newly attached elements
+  
   function applyStoredToElement(record){
     chrome.storage.sync.get(['globalBands'], data => {
       const globalBands = data.globalBands || {};
@@ -142,7 +131,7 @@
         f.gain.value = g;
       });
     });
-    // also apply master gain and compressor settings
+    
     chrome.storage.sync.get(['globalMasterGain','globalCompressor'], data => {
       const m = ensureMasterNodes();
       if(typeof data.globalMasterGain !== 'undefined') m.gain.gain.value = Number(data.globalMasterGain);
@@ -154,12 +143,12 @@
           if(typeof c.ratio !== 'undefined') m.compressor.ratio.value = Number(c.ratio);
           if(typeof c.attack !== 'undefined') m.compressor.attack.value = Number(c.attack);
           if(typeof c.release !== 'undefined') m.compressor.release.value = Number(c.release);
-        }catch(e){/* ignore */}
+  }catch(e){}
       }
     });
   }
 
-  // Auto-EQ: analyze frequency content and attenuate the loudest bands among our defined centers
+  
   function autoEQApply(){
     const m = ensureMasterNodes();
     const analyser = m.analyser;
@@ -169,19 +158,19 @@
     const freqPerBin = ctx.sampleRate / fftSize;
     const data = new Float32Array(bins);
 
-    // sample a short window (average a few frames)
+    
     const frames = 6;
     const accum = new Float32Array(bins);
     for(let f=0; f<frames; f++){
       analyser.getFloatFrequencyData(data);
       for(let i=0;i<bins;i++) accum[i] += data[i];
     }
-    for(let i=0;i<bins;i++) accum[i] /= frames; // average dB values
+  for(let i=0;i<bins;i++) accum[i] /= frames;
 
-    // map our band centers to average energy in +/- half-octave band
+    
     const bandEnergies = bands.map(b => {
       const center = b.freq;
-      // half-octave bounds
+      
       const low = center / Math.sqrt(2);
       const high = center * Math.sqrt(2);
       const lowBin = Math.max(0, Math.floor(low / freqPerBin));
@@ -193,31 +182,30 @@
       return avgDb;
     });
 
-    // find median and pick top bands above median+8dB
+    
     const sorted = bandEnergies.slice().sort((a,b)=>a-b);
     const median = sorted[Math.floor(sorted.length/2)];
-    const threshold = median + 8; // dB above median considered harsh
+  const threshold = median + 8;
     const harshBands = [];
     bandEnergies.forEach((val, idx) => { if(val >= threshold) harshBands.push({idx, val}); });
 
-    // if none exceed threshold, pick the top 1 band
+    
     if(harshBands.length === 0){
       let maxIdx = 0; let maxVal = -Infinity;
       bandEnergies.forEach((v,i)=>{ if(v>maxVal){ maxVal=v; maxIdx=i; }});
       harshBands.push({idx:maxIdx, val:maxVal});
     }
 
-    // attenuate selected bands by 6-10 dB depending on how loud they are
-    chrome.storage.sync.get(['globalBands'], data => {
+  chrome.storage.sync.get(['globalBands'], data => {
       const globalBands = data.globalBands || {};
       for(const hb of harshBands){
         const idx = hb.idx;
         const over = Math.max(0, hb.val - median);
-        const reduce = Math.min(12, 6 + Math.round(over/6)*2); // 6..12dB
+  const reduce = Math.min(12, 6 + Math.round(over/6)*2);
         const prev = Number(globalBands[idx]) || 0;
         const newVal = prev - reduce;
         globalBands[idx] = newVal;
-        // apply smoothly to each element
+        
         for(const rec of elements.values()){
           const f = rec.filters[idx];
           if(f){
@@ -231,7 +219,7 @@
     return {ok:true, harshBands};
   }
 
-  // Observe additions
+  
   const mo = new MutationObserver(mutations => {
     for(const m of mutations){
       for(const n of m.addedNodes){
@@ -240,21 +228,21 @@
           const r = attach(n);
           if(r) applyStoredToElement(r);
         }
-        // also find nested
+        
         const medias = Array.from(n.querySelectorAll && n.querySelectorAll('audio,video') || []);
         medias.forEach(m => { const r = attach(m); if(r) applyStoredToElement(r); });
       }
     }
   });
 
-  // initial attach
+  
   attachAllExisting();
   for(const rec of elements.values()) applyStoredToElement(rec);
   mo.observe(document.documentElement || document, {childList: true, subtree: true});
 
-  // message handling from popup
+  
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    // try to resume context on any incoming message (user interacted via popup)
+    
     ensureContextRunning();
     console.debug('content_script: onMessage', msg);
     if(msg && msg.type === 'getMedia'){
@@ -266,7 +254,7 @@
       return true;
     }
 
-    if(msg && msg.type === 'setBand'){ // {id, bandIndex, gain}
+  if(msg && msg.type === 'setBand'){
       const rec = elements.get(msg.id);
       if(rec && rec.filters[msg.bandIndex]){
         rec.filters[msg.bandIndex].gain.value = Number(msg.gain) || 0;
@@ -275,7 +263,7 @@
       return true;
     }
 
-    if(msg && msg.type === 'setAllBands'){ // {bandIndex, gain}
+  if(msg && msg.type === 'setAllBands'){
       for(const rec of elements.values()){
         if(rec.filters[msg.bandIndex]) rec.filters[msg.bandIndex].gain.value = Number(msg.gain) || 0;
       }
@@ -291,7 +279,7 @@
       return true;
     }
 
-    if(msg && msg.type === 'setCompressor'){ // {settings: {threshold,knee,ratio,attack,release}}
+  if(msg && msg.type === 'setCompressor'){
       const m = ensureMasterNodes();
       const s = msg.settings || {};
       if(typeof s.threshold !== 'undefined') m.compressor.threshold.value = Number(s.threshold);
@@ -304,20 +292,19 @@
     }
 
     if(msg && msg.type === 'applyAutoFix'){
-      // apply a conservative auto-fix: lower master gain and enable compressor with limiter-like settings
+      
       const m = ensureMasterNodes();
       ensureContextRunning();
-      // reduce gain to avoid clipping (0.5 ~= -6dB)
+      
       m.gain.gain.value = 0.5;
-      // more aggressive compressor/limiter
+      
       m.compressor.threshold.value = -18;
       m.compressor.knee.value = 0;
       m.compressor.ratio.value = 12;
       m.compressor.attack.value = 0.001;
       m.compressor.release.value = 0.05;
-      // persist these settings
-      chrome.storage.sync.set({globalMasterGain: m.gain.gain.value, globalCompressor:{threshold: m.compressor.threshold.value, knee: m.compressor.knee.value, ratio: m.compressor.ratio.value, attack: m.compressor.attack.value, release: m.compressor.release.value}});
-      // also apply stored band settings (in case we want to reduce harsh bands)
+  chrome.storage.sync.set({globalMasterGain: m.gain.gain.value, globalCompressor:{threshold: m.compressor.threshold.value, knee: m.compressor.knee.value, ratio: m.compressor.ratio.value, attack: m.compressor.attack.value, release: m.compressor.release.value}});
+      
       chrome.storage.sync.get(['globalBands'], data => {
         const globalBands = data.globalBands || {};
         for(const rec of elements.values()){
@@ -328,7 +315,7 @@
       return true;
     }
 
-    if(msg && msg.type === 'applyAll'){ // apply all stored bands
+  if(msg && msg.type === 'applyAll'){
       chrome.storage.sync.get(['globalBands'], data => {
         const globalBands = data.globalBands || {};
         for(const rec of elements.values()){

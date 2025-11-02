@@ -1,22 +1,19 @@
-// popup.js - UI logic to control equalizer
 (function(){
-  // Define two band sets
   const bandSets = {
     10: [32,64,125,250,500,1000,2000,4000,8000,16000],
     31: [20,25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000,20000]
   };
 
-  let currentBandMode = '10'; // default to 10-band
-  let bands = bandSets[10]; // Start with 10-band set
+  let currentBandMode = '10';
+  let bands = bandSets[10];
 
-  // helper to send messages safely to the active tab and handle cases with no receiver
+  
   function sendToActiveTab(msg, cb){
     chrome.tabs.query({active:true,currentWindow:true}, tabs => {
       const tab = tabs && tabs[0];
       if(!tab){ if(cb) cb(null); return; }
       chrome.tabs.sendMessage(tab.id, msg, resp => {
         if(chrome.runtime.lastError){
-          // no content script in tab or other error; ignore silently (avoid noisy console warnings)
           if(cb) cb(null);
         }else{
           if(cb) cb(resp);
@@ -32,7 +29,7 @@
   const refreshBtn = document.getElementById('refreshBtn');
   const resetBtn = document.getElementById('resetBtn');
   const bandModeSelect = document.getElementById('bandModeSelect');
-  // tabs
+  
   const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   const tabContents = Array.from(document.querySelectorAll('.tab-content'));
   const compThreshold = document.getElementById('compThreshold');
@@ -53,10 +50,10 @@
   const importUrlBtn = document.getElementById('importUrlBtn');
   
 
-  // local cache of band gains to batch writes and avoid storage quota errors
+  
   const globalBandsLocal = {};
   let bandsSaveTimer = null;
-  const BANDS_SAVE_DEBOUNCE_MS = 1000; // wait 1s after last change to write
+  const BANDS_SAVE_DEBOUNCE_MS = 1000;
 
   function scheduleSaveBands(){
     if(bandsSaveTimer) clearTimeout(bandsSaveTimer);
@@ -70,7 +67,7 @@
     const div = document.createElement('div');
     div.className = 'band';
     const label = document.createElement('label');
-    // Format frequency: 1000+ Hz as K (e.g., 1000 Hz = 1K, 16000 Hz = 16K)
+    
     const freqLabel = freq >= 1000 ? (freq / 1000) + 'K' : freq + ' Hz';
     label.textContent = freqLabel;
     const range = document.createElement('input');
@@ -79,9 +76,7 @@
     range.value = value || 0;
     range.dataset.band = idx;
     const val = document.createElement('div'); val.className='val'; val.textContent = range.value;
-    
     range.addEventListener('input', ()=>{ val.textContent = range.value; onBandChange(idx, range.value); });
-    
     div.appendChild(label);
     div.appendChild(range);
     div.appendChild(val);
@@ -89,22 +84,16 @@
   }
 
   function onBandChange(bandIndex, gain){
-    // Always apply to all elements immediately
     globalBandsLocal[bandIndex] = Number(gain);
     scheduleSaveBands();
-    // Always send to all tabs/elements
     sendToActiveTab({type:'setAllBands', bandIndex, gain});
   }
 
-  // master gain change
   function onMasterGainChange(v){
     masterVal.textContent = Number(v).toFixed(2);
-    // debounce master gain writes
     if(typeof v !== 'number') v = Number(v);
     if(!isFinite(v)) return;
-    // update UI immediately, send to page
     sendToActiveTab({type:'setMasterGain', gain: Number(v)});
-    // schedule save
     scheduleSaveMaster(Number(v));
   }
 
@@ -142,18 +131,14 @@
 
   refreshBtn.addEventListener('click', ()=> refreshMediaList());
   resetBtn.addEventListener('click', ()=>{
-    // reset storage & UI
     chrome.storage.sync.set({globalBands:{}, globalMasterGain:1, globalCompressor:{}});
-    // clear local cache
     for(const k in globalBandsLocal) delete globalBandsLocal[k];
     const ranges = bandsWrap.querySelectorAll('input[type=range]');
     ranges.forEach(r=>{ r.value=0; const v = r.parentElement.querySelector('.val'); if(v) v.textContent=0; });
     if(masterGainInput){ masterGainInput.value = 1; masterVal.textContent = '1.00'; }
-    // apply
     sendToActiveTab({type:'applyAll'});
   });
 
-  // Band mode switcher
   if(bandModeSelect){
     bandModeSelect.addEventListener('change', ()=>{
       const newMode = bandModeSelect.value;
@@ -161,11 +146,9 @@
         currentBandMode = newMode;
         bands = bandSets[newMode];
         chrome.storage.sync.set({bandMode: newMode});
-        // Reload bands UI
         populateBands(globalBandsLocal);
       }
     });
-    // Load saved band mode
     chrome.storage.sync.get(['bandMode'], data => {
       if(data.bandMode && bandModeSelect){
         bandModeSelect.value = data.bandMode;
@@ -179,14 +162,12 @@
     masterGainInput.addEventListener('input', ()=> onMasterGainChange(masterGainInput.value));
   }
 
-  // tab switching
   tabButtons.forEach(btn => btn.addEventListener('click', ()=>{
     const tab = btn.dataset.tab;
     tabButtons.forEach(b=>b.classList.toggle('active', b===btn));
     tabContents.forEach(c=> c.classList.toggle('active', c.id === `tab-${tab}`));
   }));
 
-  // compressor controls wiring
   function updateCompUI(){
     if(compThreshold) compThresholdVal.textContent = compThreshold.value;
     if(compRatio) compRatioVal.textContent = compRatio.value;
@@ -198,7 +179,6 @@
   if(compAttack) compAttack.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{attack: Number(compAttack.value)}}); });
   if(compRelease) compRelease.addEventListener('input', ()=>{ updateCompUI(); sendToActiveTab({type:'setCompressor', settings:{release: Number(compRelease.value)}}); });
 
-  // presets: save, apply, delete
   function renderPresets(presets){
     presetList.innerHTML = '';
     const names = Object.keys(presets || {});
@@ -208,21 +188,20 @@
       const item = document.createElement('div'); item.className = 'preset-item';
       const span = document.createElement('div'); span.className='name'; span.textContent = name;
       const actions = document.createElement('div'); actions.className='actions';
-  const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export';
-  const copyBtn = document.createElement('button'); copyBtn.textContent = 'Copy link';
-  const applyBtn = document.createElement('button'); applyBtn.textContent = 'Apply';
-  const delBtn = document.createElement('button'); delBtn.textContent = 'Delete';
-  exportBtn.addEventListener('click', ()=> exportPreset(name));
-  copyBtn.addEventListener('click', ()=> copyPresetLink(name));
-  applyBtn.addEventListener('click', ()=> applyPreset(name));
-  delBtn.addEventListener('click', ()=> deletePreset(name));
-  actions.appendChild(exportBtn); actions.appendChild(copyBtn); actions.appendChild(applyBtn); actions.appendChild(delBtn);
+      const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export';
+      const copyBtn = document.createElement('button'); copyBtn.textContent = 'Copy link';
+      const applyBtn = document.createElement('button'); applyBtn.textContent = 'Apply';
+      const delBtn = document.createElement('button'); delBtn.textContent = 'Delete';
+      exportBtn.addEventListener('click', ()=> exportPreset(name));
+      copyBtn.addEventListener('click', ()=> copyPresetLink(name));
+      applyBtn.addEventListener('click', ()=> applyPreset(name));
+      delBtn.addEventListener('click', ()=> deletePreset(name));
+      actions.appendChild(exportBtn); actions.appendChild(copyBtn); actions.appendChild(applyBtn); actions.appendChild(delBtn);
       item.appendChild(span); item.appendChild(actions);
       presetList.appendChild(item);
     });
   }
 
-  // Export a single preset as JSON file
   function exportPreset(name){
     loadPresets(ps => {
       if(!ps[name]){ alert('Preset not found'); return; }
@@ -240,7 +219,6 @@
     });
   }
 
-  // Export all presets
   function exportAllPresets(){
     loadPresets(ps => {
       const blob = new Blob([JSON.stringify(ps, null, 2)], {type:'application/json'});
@@ -257,7 +235,6 @@
     });
   }
 
-  // Import presets from a File object. Merge with existing presets; avoid name collisions by suffixing
   function importPresetsFromFile(file){
     if(!file) return;
     const reader = new FileReader();
@@ -269,7 +246,6 @@
           const merged = Object.assign({}, existing);
           for(const key in parsed){
             let name = key;
-            // ensure unique name
             let suffix = 0;
             while(merged.hasOwnProperty(name)){
               suffix++; name = `${key} (imported${suffix>1?'-'+suffix:''})`;
@@ -285,7 +261,6 @@
     reader.readAsText(file);
   }
 
-  // Helpers to encode/decode base64-url safely (handles unicode)
   function base64UrlEncode(str){
     const utf8 = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1){ return String.fromCharCode('0x' + p1); });
     const b64 = btoa(utf8).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -300,9 +275,6 @@
     return decodeURIComponent(out);
   }
 
-  // Create a shareable URL/string for a single preset
-  // Use a custom scheme so the link is clearly non-web and cannot be claimed as a domain.
-  // Format: betsoundter://preset#<base64url> (share from BetSoundTer)
   function createShareStringForPreset(name, preset){
     const obj = {};
     obj[name] = preset;
@@ -330,25 +302,18 @@
     });
   }
 
-  // Import from a pasted URL or raw base64 string
   function importFromUrlString(s){
     if(!s || !s.trim()) return alert('Please paste a URL or encoded preset string.');
     s = s.trim();
     let candidate = s;
     try{
-  // Accept fragment (#...), query param (data=...), raw base64, or our custom scheme (betsoundter://)
-  // If the user pasted a betsoundter:// URL (from BetSoundTer), extract the encoded payload from fragment or path.
       if(s.startsWith('betsoundter://')){
-        // remove scheme
         let tail = s.slice('betsoundter://'.length);
-        // if there's a fragment in the full string, prefer that
         const fullHash = s.indexOf('#');
         if(fullHash >= 0){ candidate = s.slice(fullHash+1); }
         else {
-          // drop optional leading "preset" segment
           if(tail.startsWith('preset/')) tail = tail.slice('preset/'.length);
           else if(tail.startsWith('preset')) tail = tail.slice('preset'.length);
-          // trim leading slashes
           tail = tail.replace(/^\/+/, '');
           candidate = tail;
         }
@@ -356,7 +321,6 @@
         const hashIdx = s.indexOf('#');
         if(hashIdx >= 0) candidate = s.slice(hashIdx+1);
         else{
-          // try query param data=
           const qIdx = s.indexOf('?');
           if(qIdx >= 0){
             const qs = s.slice(qIdx+1).split('&');
@@ -390,36 +354,28 @@
 
   function savePreset(name){
     if(!name) return;
-    // capture current settings
     const preset = {};
     preset.bands = {};
-    // copy local bands cache
     for(const k in globalBandsLocal) preset.bands[k] = globalBandsLocal[k];
-    // master gain
     preset.masterGain = masterGainInput ? Number(masterGainInput.value) : 1;
-    // compressor UI values
     preset.compressor = {
       threshold: compThreshold ? Number(compThreshold.value) : -12,
       ratio: compRatio ? Number(compRatio.value) : 6,
       attack: compAttack ? Number(compAttack.value) : 0.003,
       release: compRelease ? Number(compRelease.value) : 0.25
     };
-    // store
     loadPresets(ps => { ps[name] = preset; chrome.storage.sync.set({presets: ps}, ()=>{ renderPresets(ps); }); });
   }
 
   function applyPreset(name){
     loadPresets(ps => {
       const p = ps[name]; if(!p) return;
-      // apply bands
       if(p.bands){ 
         for(const k in p.bands){ 
           globalBandsLocal[k] = Number(p.bands[k]);
-          // Send each band change immediately
           sendToActiveTab({type:'setAllBands', bandIndex: Number(k), gain: Number(p.bands[k])});
         } 
       }
-      // update UI sliders
       const ranges = bandsWrap.querySelectorAll('input[type=range]');
       ranges.forEach(r=>{ 
         const idx = r.dataset.band; 
@@ -429,9 +385,7 @@
           if(v) v.textContent = r.value; 
         } 
       });
-      // persist debounced
       scheduleSaveBands();
-      // master & compressor
       if(p.masterGain && masterGainInput){ 
         masterGainInput.value = p.masterGain; 
         masterVal.textContent = Number(p.masterGain).toFixed(2); 
@@ -456,40 +410,30 @@
 
   if(savePresetBtn){ savePresetBtn.addEventListener('click', ()=>{ const n = presetNameInput.value && presetNameInput.value.trim(); if(n) { savePreset(n); presetNameInput.value = ''; } }); }
 
-  // wire up import/export UI
   if(exportAllBtn) exportAllBtn.addEventListener('click', ()=> exportAllPresets());
   if(importBtn && importFile){
     importBtn.addEventListener('click', ()=> importFile.click());
     importFile.addEventListener('change', (ev)=>{
       const f = ev.target.files && ev.target.files[0];
       if(f) importPresetsFromFile(f);
-      // reset input so same file can be selected again
       importFile.value = '';
     });
   }
 
-  // wire import-from-URL UI
   if(importUrlBtn && importUrl){
     importUrlBtn.addEventListener('click', ()=>{ importFromUrlString(importUrl.value); importUrl.value = ''; });
   }
 
-  // load presets on init
   loadPresets(ps => renderPresets(ps));
 
-  // (auto buttons removed) compressor values loaded below
-
-  // init: load stored bands & refresh media
   chrome.storage.sync.get(['globalBands'], data => {
     const saved = data.globalBands || {};
-    // populate local cache
     for(const k in saved) try{ globalBandsLocal[k] = Number(saved[k]); }catch(e){}
     populateBands(saved);
   });
-  // load master gain stored value
   chrome.storage.sync.get(['globalMasterGain'], data => {
     if(typeof data.globalMasterGain !== 'undefined' && masterGainInput){ masterGainInput.value = data.globalMasterGain; masterVal.textContent = Number(data.globalMasterGain).toFixed(2); }
   });
-  // load compressor stored values
   chrome.storage.sync.get(['globalCompressor'], data => {
     const c = data.globalCompressor || {};
     if(compThreshold && typeof c.threshold !== 'undefined') compThreshold.value = c.threshold;
