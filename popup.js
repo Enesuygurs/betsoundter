@@ -301,12 +301,14 @@
   }
 
   // Create a shareable URL/string for a single preset
+  // Use the reserved ".invalid" TLD so the domain can never be registered.
   function createShareStringForPreset(name, preset){
     const obj = {};
     obj[name] = preset;
     const json = JSON.stringify(obj);
     const enc = base64UrlEncode(json);
-    return `https://betsoundter.app/preset#${enc}`;
+    // Example: https://preset.invalid/preset#<base64url>
+    return `https://preset.invalid/preset#${enc}`;
   }
 
   function copyTextToClipboard(text){
