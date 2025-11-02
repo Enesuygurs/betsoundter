@@ -46,6 +46,9 @@
   const presetNameInput = document.getElementById('presetName');
   const savePresetBtn = document.getElementById('savePresetBtn');
   const presetList = document.getElementById('presetList');
+  const exportAllBtn = document.getElementById('exportAllBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFile = document.getElementById('importFile');
   
 
   // local cache of band gains to batch writes and avoid storage quota errors
@@ -203,14 +206,79 @@
       const item = document.createElement('div'); item.className = 'preset-item';
       const span = document.createElement('div'); span.className='name'; span.textContent = name;
       const actions = document.createElement('div'); actions.className='actions';
+      const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export';
       const applyBtn = document.createElement('button'); applyBtn.textContent = 'Apply';
       const delBtn = document.createElement('button'); delBtn.textContent = 'Delete';
+      exportBtn.addEventListener('click', ()=> exportPreset(name));
       applyBtn.addEventListener('click', ()=> applyPreset(name));
       delBtn.addEventListener('click', ()=> deletePreset(name));
-      actions.appendChild(applyBtn); actions.appendChild(delBtn);
+      actions.appendChild(exportBtn); actions.appendChild(applyBtn); actions.appendChild(delBtn);
       item.appendChild(span); item.appendChild(actions);
       presetList.appendChild(item);
     });
+  }
+
+  // Export a single preset as JSON file
+  function exportPreset(name){
+    loadPresets(ps => {
+      if(!ps[name]){ alert('Preset not found'); return; }
+      const content = {};
+      content[name] = ps[name];
+      const blob = new Blob([JSON.stringify(content, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name.replace(/[^a-z0-9-_ ]/ig,'') || 'preset'}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // Export all presets
+  function exportAllPresets(){
+    loadPresets(ps => {
+      const blob = new Blob([JSON.stringify(ps, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const now = new Date();
+      const stamp = now.toISOString().slice(0,19).replace(/[:T]/g,'-');
+      a.download = `presets-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // Import presets from a File object. Merge with existing presets; avoid name collisions by suffixing
+  function importPresetsFromFile(file){
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const parsed = JSON.parse(e.target.result);
+        if(!parsed || typeof parsed !== 'object') throw new Error('Invalid format');
+        loadPresets(existing => {
+          const merged = Object.assign({}, existing);
+          for(const key in parsed){
+            let name = key;
+            // ensure unique name
+            let suffix = 0;
+            while(merged.hasOwnProperty(name)){
+              suffix++; name = `${key} (imported${suffix>1?'-'+suffix:''})`;
+            }
+            merged[name] = parsed[key];
+          }
+          chrome.storage.sync.set({presets: merged}, ()=>{ renderPresets(merged); alert('Presets imported.'); });
+        });
+      }catch(err){
+        alert('Failed to import presets: ' + (err && err.message ? err.message : 'Invalid file'));
+      }
+    };
+    reader.readAsText(file);
   }
 
   function loadPresets(cb){
@@ -284,6 +352,18 @@
   }
 
   if(savePresetBtn){ savePresetBtn.addEventListener('click', ()=>{ const n = presetNameInput.value && presetNameInput.value.trim(); if(n) { savePreset(n); presetNameInput.value = ''; } }); }
+
+  // wire up import/export UI
+  if(exportAllBtn) exportAllBtn.addEventListener('click', ()=> exportAllPresets());
+  if(importBtn && importFile){
+    importBtn.addEventListener('click', ()=> importFile.click());
+    importFile.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if(f) importPresetsFromFile(f);
+      // reset input so same file can be selected again
+      importFile.value = '';
+    });
+  }
 
   // load presets on init
   loadPresets(ps => renderPresets(ps));
