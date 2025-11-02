@@ -15,6 +15,11 @@ BetSoundTer is a lightweight Chrome extension that adds a per-page audio equaliz
 
 ### 🖼️ Screenshots
 
+<img width="798" height="468" alt="image" src="https://github.com/user-attachments/assets/6a50633a-6164-4fe6-89ad-d4b4a7fed9fb" />
+
+<img width="799" height="438" alt="image" src="https://github.com/user-attachments/assets/9ed64c7c-55e2-4842-b2e8-df537c08bcc6" />
+
+<img width="799" height="423" alt="image" src="https://github.com/user-attachments/assets/f1fcb672-0fa2-4e7f-b3e4-2e50f0b59a9b" />
 
 
 ### 💻 Installation (If need)
