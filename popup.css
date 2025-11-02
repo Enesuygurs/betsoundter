@@ -96,6 +96,12 @@ button.primary, button.ghost, button.danger{
 .preset-row label{ white-space:nowrap; font-size:13px; color:var(--muted); }
 .preset-row input{ flex:1; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:var(--text); }
 .preset-list{ display:flex; flex-direction:column; gap:8px; max-height:160px; overflow:auto; margin-bottom:8px; }
+/* hide scrollbars but keep scrolling behavior */
+.preset-list{
+	-ms-overflow-style: none; /* IE and older Edge */
+	scrollbar-width: none; /* Firefox */
+}
+.preset-list::-webkit-scrollbar{ width:0; height:0; }
 .preset-item{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px; border-radius:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
 .preset-item .name{ font-weight:700; color:var(--text); }
 .preset-item .actions{ display:flex; gap:8px; }
