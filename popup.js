@@ -49,6 +49,8 @@
   const exportAllBtn = document.getElementById('exportAllBtn');
   const importBtn = document.getElementById('importBtn');
   const importFile = document.getElementById('importFile');
+  const importUrl = document.getElementById('importUrl');
+  const importUrlBtn = document.getElementById('importUrlBtn');
   
 
   // local cache of band gains to batch writes and avoid storage quota errors
@@ -206,13 +208,15 @@
       const item = document.createElement('div'); item.className = 'preset-item';
       const span = document.createElement('div'); span.className='name'; span.textContent = name;
       const actions = document.createElement('div'); actions.className='actions';
-      const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export';
-      const applyBtn = document.createElement('button'); applyBtn.textContent = 'Apply';
-      const delBtn = document.createElement('button'); delBtn.textContent = 'Delete';
-      exportBtn.addEventListener('click', ()=> exportPreset(name));
-      applyBtn.addEventListener('click', ()=> applyPreset(name));
-      delBtn.addEventListener('click', ()=> deletePreset(name));
-      actions.appendChild(exportBtn); actions.appendChild(applyBtn); actions.appendChild(delBtn);
+  const exportBtn = document.createElement('button'); exportBtn.textContent = 'Export';
+  const copyBtn = document.createElement('button'); copyBtn.textContent = 'Copy link';
+  const applyBtn = document.createElement('button'); applyBtn.textContent = 'Apply';
+  const delBtn = document.createElement('button'); delBtn.textContent = 'Delete';
+  exportBtn.addEventListener('click', ()=> exportPreset(name));
+  copyBtn.addEventListener('click', ()=> copyPresetLink(name));
+  applyBtn.addEventListener('click', ()=> applyPreset(name));
+  delBtn.addEventListener('click', ()=> deletePreset(name));
+  actions.appendChild(exportBtn); actions.appendChild(copyBtn); actions.appendChild(applyBtn); actions.appendChild(delBtn);
       item.appendChild(span); item.appendChild(actions);
       presetList.appendChild(item);
     });
@@ -279,6 +283,84 @@
       }
     };
     reader.readAsText(file);
+  }
+
+  // Helpers to encode/decode base64-url safely (handles unicode)
+  function base64UrlEncode(str){
+    const utf8 = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1){ return String.fromCharCode('0x' + p1); });
+    const b64 = btoa(utf8).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    return b64;
+  }
+  function base64UrlDecode(b64){
+    b64 = b64.replace(/-/g,'+').replace(/_/g,'/');
+    while(b64.length % 4) b64 += '=';
+    const bin = atob(b64);
+    let out = '';
+    for(let i=0;i<bin.length;i++) out += '%' + ('00' + bin.charCodeAt(i).toString(16)).slice(-2);
+    return decodeURIComponent(out);
+  }
+
+  // Create a shareable URL/string for a single preset
+  function createShareStringForPreset(name, preset){
+    const obj = {};
+    obj[name] = preset;
+    const json = JSON.stringify(obj);
+    const enc = base64UrlEncode(json);
+    return `https://betsoundter.app/preset#${enc}`;
+  }
+
+  function copyTextToClipboard(text){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=> alert('Link copied to clipboard')) .catch(()=> fallbackCopy(text));
+    }else fallbackCopy(text);
+  }
+  function fallbackCopy(text){
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); alert('Link copied to clipboard'); }catch(e){ prompt('Copy the link below:', text); }
+    ta.remove();
+  }
+
+  function copyPresetLink(name){
+    loadPresets(ps => {
+      const p = ps[name]; if(!p){ alert('Preset not found'); return; }
+      const link = createShareStringForPreset(name, p);
+      copyTextToClipboard(link);
+    });
+  }
+
+  // Import from a pasted URL or raw base64 string
+  function importFromUrlString(s){
+    if(!s || !s.trim()) return alert('Please paste a URL or encoded preset string.');
+    s = s.trim();
+    let candidate = s;
+    try{
+      const hashIdx = s.indexOf('#');
+      if(hashIdx >= 0) candidate = s.slice(hashIdx+1);
+      else{
+        const qIdx = s.indexOf('?');
+        if(qIdx >= 0){
+          const qs = s.slice(qIdx+1).split('&');
+          for(const part of qs){ if(part.startsWith('data=')){ candidate = decodeURIComponent(part.slice(5)); break; } }
+        }
+      }
+      const decoded = base64UrlDecode(candidate);
+      const parsed = JSON.parse(decoded);
+      if(!parsed || typeof parsed !== 'object') throw new Error('Invalid preset payload');
+      loadPresets(existing => {
+        const merged = Object.assign({}, existing);
+        for(const key in parsed){
+          let name = key;
+          let suffix = 0;
+          while(merged.hasOwnProperty(name)){
+            suffix++; name = `${key} (imported${suffix>1?'-'+suffix:''})`;
+          }
+          merged[name] = parsed[key];
+        }
+        chrome.storage.sync.set({presets: merged}, ()=>{ renderPresets(merged); alert('Preset(s) imported from URL.'); });
+      });
+    }catch(err){
+      alert('Failed to import from URL/encoded string: ' + (err && err.message?err.message:'invalid data'));
+    }
   }
 
   function loadPresets(cb){
@@ -363,6 +445,11 @@
       // reset input so same file can be selected again
       importFile.value = '';
     });
+  }
+
+  // wire import-from-URL UI
+  if(importUrlBtn && importUrl){
+    importUrlBtn.addEventListener('click', ()=>{ importFromUrlString(importUrl.value); importUrl.value = ''; });
   }
 
   // load presets on init
