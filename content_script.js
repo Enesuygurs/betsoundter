@@ -12,7 +12,32 @@
     {freq: 16000, type: 'highshelf'}
   ];
 
-  const ctx = (window._eqAudioContext = window._eqAudioContext || new (window.AudioContext || window.webkitAudioContext)());
+  // lazy AudioContext: don't create/resume until we detect a user gesture
+  let ctx = window._eqAudioContext || null;
+
+  function getCtx(){
+    if(!ctx){
+      try{ ctx = window._eqAudioContext = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ ctx = null; }
+    }
+    return ctx;
+  }
+
+  // track whether a user gesture has occurred on the page
+  window._eqUserGestureSeen = window._eqUserGestureSeen || false;
+  function attemptResume(){
+    const _ctx = getCtx();
+    if(!_ctx) return Promise.resolve();
+    if(_ctx.state === 'running') return Promise.resolve();
+    if(!window._eqUserGestureSeen) return Promise.resolve();
+    return _ctx.resume().then(()=>{
+      console.debug('content_script: AudioContext resumed after user gesture');
+    }).catch(()=>{});
+  }
+
+  // listen for common user gestures to allow resuming the audio context
+  ['click','keydown','touchstart'].forEach(evt => {
+    try{ document.addEventListener(evt, function onFirstGesture(){ window._eqUserGestureSeen = true; attemptResume(); document.removeEventListener(evt, onFirstGesture); }, {passive:true}); }catch(e){}
+  });
   const elements = new Map();
   let nextId = 1;
   
@@ -20,27 +45,29 @@
 
   function ensureMasterNodes(){
     if(master.gain && master.compressor) return master;
-    master.gain = ctx.createGain();
-  master.gain.gain.value = 1.0;
-    master.compressor = ctx.createDynamicsCompressor();
-    
-    master.analyser = ctx.createAnalyser();
+    const _ctx = getCtx();
+    if(!_ctx) return master;
+    master.gain = _ctx.createGain();
+    master.gain.gain.value = 1.0;
+    master.compressor = _ctx.createDynamicsCompressor();
+
+    master.analyser = _ctx.createAnalyser();
     master.analyser.fftSize = 2048;
     master.analyser.smoothingTimeConstant = 0.3;
-    
-    master.waveshaper = ctx.createWaveShaper();
+
+    master.waveshaper = _ctx.createWaveShaper();
     master.waveshaper.curve = makeSoftClipperCurve(4096, 0.5);
     master.waveshaper.oversample = '4x';
-  master.compressor.threshold.value = -12;
+    master.compressor.threshold.value = -12;
     master.compressor.knee.value = 30;
     master.compressor.ratio.value = 6;
     master.compressor.attack.value = 0.003;
     master.compressor.release.value = 0.25;
-    
+
     master.gain.connect(master.analyser);
     master.gain.connect(master.compressor);
     master.compressor.connect(master.waveshaper);
-    master.waveshaper.connect(ctx.destination);
+    master.waveshaper.connect(_ctx.destination);
     return master;
   }
 
@@ -56,18 +83,23 @@
 
   
   function ensureContextRunning(){
-    if(!ctx) return Promise.resolve();
-    if(ctx.state === 'running') return Promise.resolve();
-  return ctx.resume().catch(e => {});
+    const _ctx = getCtx();
+    if(!_ctx) return Promise.resolve();
+    if(_ctx.state === 'running') return Promise.resolve();
+    // Only attempt resume if we've seen a user gesture; otherwise do nothing
+    if(!window._eqUserGestureSeen) return Promise.resolve();
+    return _ctx.resume().catch(e => {});
   }
 
   function createFilters(){
+    const _ctx = getCtx();
+    if(!_ctx) return bands.map(b => null);
     return bands.map(b => {
-      const f = ctx.createBiquadFilter();
+      const f = _ctx.createBiquadFilter();
       f.type = b.type;
       f.frequency.value = b.freq;
-  f.Q.value = 1.0;
-  f.gain.value = 0;
+      f.Q.value = 1.0;
+      f.gain.value = 0;
       return f;
     });
   }
@@ -78,17 +110,25 @@
       const id = el._eqId = el._eqId || `eq-${nextId++}`;
       let source = null;
       try{
-          source = ctx.createMediaElementSource(el);
-        }catch(e){
-          try{
-            if(typeof el.captureStream === 'function'){
-              const stream = el.captureStream();
-              source = ctx.createMediaStreamSource(stream);
-              console.debug('content_script: used captureStream fallback for', el);
-            }
-          }catch(e2){
-          }
+        const _ctx = getCtx();
+        if(_ctx){
+          source = _ctx.createMediaElementSource(el);
+        } else if(typeof el.captureStream === 'function'){
+          const stream = el.captureStream();
+          const _ctx2 = getCtx();
+          if(_ctx2) source = _ctx2.createMediaStreamSource(stream);
+          if(source) console.debug('content_script: used captureStream fallback for', el);
         }
+      }catch(e){
+        try{
+          if(typeof el.captureStream === 'function'){
+            const stream = el.captureStream();
+            const _ctx2 = getCtx();
+            if(_ctx2) source = _ctx2.createMediaStreamSource(stream);
+            console.debug('content_script: used captureStream fallback for', el);
+          }
+        }catch(e2){}
+      }
 
       if(!source){
         console.debug('content_script: could not create MediaElementSource for', el);
@@ -98,20 +138,22 @@
       const filters = createFilters();
       let node = source;
       for(const f of filters){
-        node.connect(f);
+        if(f && node) node.connect(f);
         node = f;
       }
-      
-      // Ensure context is running and connect immediately
-      ensureContextRunning().then(()=>{
-        const m = ensureMasterNodes();
-        try{ 
-          node.connect(m.gain); 
-          console.debug('content_script: connected node to master gain for', id);
-        }catch(e){ 
-          console.debug('content_script: failed to connect node to master gain', e); 
-        }
-      });
+
+      // connect to master when possible; try to resume on media play (user gesture)
+      const tryConnectToMaster = ()=>{
+        ensureContextRunning().then(()=>{
+          const m = ensureMasterNodes();
+          try{ if(node && m && m.gain) node.connect(m.gain); console.debug('content_script: connected node to master gain for', id); }catch(e){ console.debug('content_script: failed to connect node to master gain', e); }
+        });
+      };
+      // attempt now (may be no-op until user gesture)
+      tryConnectToMaster();
+      // if media plays, that's a user gesture in many cases - resume/connect then
+      const onPlay = ()=>{ window._eqUserGestureSeen = true; attemptResume().then(()=> tryConnectToMaster()); };
+      try{ el.addEventListener('play', onPlay, {once:true}); }catch(e){}
 
       const record = {id, el, source, filters};
       elements.set(id, record);
@@ -161,7 +203,9 @@
     if(!analyser) return {ok:false, reason:'no-analyser'};
     const fftSize = analyser.fftSize;
     const bins = analyser.frequencyBinCount;
-    const freqPerBin = ctx.sampleRate / fftSize;
+    const _ctx = getCtx();
+    if(!_ctx) return {ok:false, reason:'no-audio-context'};
+    const freqPerBin = _ctx.sampleRate / fftSize;
     const data = new Float32Array(bins);
 
     
@@ -215,7 +259,7 @@
         for(const rec of elements.values()){
           const f = rec.filters[idx];
           if(f){
-            try{ f.gain.setTargetAtTime(newVal, ctx.currentTime, 0.05); }catch(e){ f.gain.value = newVal; }
+            try{ f.gain.setTargetAtTime(newVal, _ctx.currentTime, 0.05); }catch(e){ f.gain.value = newVal; }
           }
         }
       }
