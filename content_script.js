@@ -102,9 +102,15 @@
         node = f;
       }
       
+      // Ensure context is running and connect immediately
       ensureContextRunning().then(()=>{
         const m = ensureMasterNodes();
-        try{ node.connect(m.gain); }catch(e){ console.debug('content_script: failed to connect node to master gain', e); }
+        try{ 
+          node.connect(m.gain); 
+          console.debug('content_script: connected node to master gain for', id);
+        }catch(e){ 
+          console.debug('content_script: failed to connect node to master gain', e); 
+        }
       });
 
       const record = {id, el, source, filters};
@@ -236,6 +242,13 @@
   });
 
   
+  // Initialize context early to prevent audio issues on page load
+  ensureContextRunning().then(() => {
+    console.debug('content_script: AudioContext resumed at page startup');
+  }).catch(e => {
+    console.debug('content_script: failed to resume AudioContext early:', e);
+  });
+  
   attachAllExisting();
   for(const rec of elements.values()) applyStoredToElement(rec);
   mo.observe(document.documentElement || document, {childList: true, subtree: true});
@@ -245,6 +258,16 @@
     
     ensureContextRunning();
     console.debug('content_script: onMessage', msg);
+    
+    if(msg && msg.type === 'wakeUp'){
+      // Popup opened - ensure context is running and all media is connected
+      ensureMasterNodes();
+      attachAllExisting();
+      for(const rec of elements.values()) applyStoredToElement(rec);
+      sendResponse({ok:true});
+      return true;
+    }
+    
     if(msg && msg.type === 'getMedia'){
       const list = [];
       for(const [id, rec] of elements.entries()){

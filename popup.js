@@ -50,6 +50,8 @@
   const importUrlBtn = document.getElementById('importUrlBtn');
   
 
+  // Wake up the audio context when popup opens
+  sendToActiveTab({type:'wakeUp'});
   
   const globalBandsLocal = {};
   let bandsSaveTimer = null;
